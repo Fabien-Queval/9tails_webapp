@@ -1,9 +1,12 @@
-// Importe la fonction getDb depuis mon module d'accès à la base.
-// getDb() ouvre SQLite si nécessaire, applique le schéma, puis retourne l'instance de BDD.
+// 1. IMPORTS
 import { getDb } from './db/db';
+import express from 'express';
+import healthRoute from "./routes/healthRoute";
 
-// Récupère l'instance SQLite.
-// À ce moment-là, getDb() initialise la base si elle ne l'était pas encore.
+// 2. INITIALISATION EXPRESS
+const app = express();
+
+// 3. INITIALISATION BDD
 const db = getDb();
 
 // Récupère la liste des tables utilisateur présentes dans la base SQLite.
@@ -49,3 +52,13 @@ if (tables.length !== 14) {
 // Si le script arrive jusqu'ici, c'est que la BDD contient bien 14 tables.
 // On affiche donc un message de succès.
 console.log('\n🎉 BDD vivante — Sprint 0 validé !');
+
+// 4. BRANCHEMENT DES ROUTES
+app.use(express.json());
+app.use('/api', healthRoute);
+
+// 5. DEMARRAGE DU SERVEUR
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Serveur démarré sur le port ${PORT}`);
+});
