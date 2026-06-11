@@ -19,7 +19,7 @@ export interface User {
 
 // export permet d'utiliser cette fonction dans d'autres fichiers.
 // Le : User indique que la fonction doit retourner un utilisateur complet.
-export function createUser(email: string, pseudo: string, passwordHash: string): User {
+export function createUser(email: string, pseudo: string, mot_de_passe_hash: string): User {
     // prepare() prépare une requête SQL sans encore l'exécuter.
     // Les ? sont des emplacements sécurisés : ils seront remplacés par les valeurs de run().
     // Cela évite d'injecter directement des variables dans le SQL.
@@ -31,7 +31,7 @@ export function createUser(email: string, pseudo: string, passwordHash: string):
     // run() exécute une requête qui modifie la BDD : INSERT, UPDATE ou DELETE.
     // Les valeurs remplacent les ? dans l'ordre :
     // 1er ? = email, 2e ? = pseudo, 3e ? = passwordHash.
-    const result = stmt.run(email, pseudo, passwordHash);
+    const result = stmt.run(email, pseudo, mot_de_passe_hash);
 
     // lastInsertRowid contient l'id de la dernière ligne insérée.
     // Number(...) convertit cette valeur en nombre.

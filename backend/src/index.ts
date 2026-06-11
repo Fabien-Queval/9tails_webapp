@@ -1,10 +1,14 @@
 // 1. IMPORTS
+import dotenv from 'dotenv';
+dotenv.config();
 import { getDb } from './db/db';
 import express from 'express';
 import healthRoute from "./routes/healthRoute";
+import authRoute from "./routes/authRoute";
 
 // 2. INITIALISATION EXPRESS
 const app = express();
+app.use(express.json());
 
 // 3. INITIALISATION BDD
 const db = getDb();
@@ -54,8 +58,8 @@ if (tables.length !== 14) {
 console.log('\n🎉 BDD vivante — Sprint 0 validé !');
 
 // 4. BRANCHEMENT DES ROUTES
-app.use(express.json());
 app.use('/api', healthRoute);
+app.use('/apî/auth', authRoute);
 
 // 5. DEMARRAGE DU SERVEUR
 const PORT = 3000;

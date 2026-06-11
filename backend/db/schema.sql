@@ -33,10 +33,13 @@ CREATE TABLE IF NOT EXISTS CAMPAGNE (
   id_campagne    INTEGER PRIMARY KEY AUTOINCREMENT,
   id_utilisateur INTEGER NOT NULL REFERENCES UTILISATEUR(id_utilisateur),
   titre          TEXT    NOT NULL,
+  genre          TEXT    NOT NULL,
   description    TEXT,
+  maturite       INTEGER NOT NULL,
   statut         TEXT    NOT NULL,
   date_creation  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-  CONSTRAINT CK_CAMPAGNE_STATUT CHECK (statut IN ('BROUILLON', 'ACTIVE', 'ARCHIVEE'))
+  CONSTRAINT CK_CAMPAGNE_STATUT   CHECK (statut   IN ('BROUILLON', 'ACTIVE', 'ARCHIVEE')),
+  CONSTRAINT CK_CAMPAGNE_MATURITE CHECK (maturite IN (12, 16, 18))
 );
 
 -- =============================================================================
