@@ -5,10 +5,17 @@ import { getDb } from './db/db';
 import express from 'express';
 import healthRoute from "./routes/healthRoute";
 import authRoute from "./routes/authRoute";
+import campagneRoute from "./routes/campagneRoute";
+import cors from 'cors';
 
 // 2. INITIALISATION EXPRESS
 const app = express();
+app.use(cors({
+    origin: 'http://localhost:4200'  // seul Angular peut parler à l'API
+}));
+
 app.use(express.json());
+
 
 // 3. INITIALISATION BDD
 const db = getDb();
@@ -59,7 +66,8 @@ console.log('\n🎉 BDD vivante — Sprint 0 validé !');
 
 // 4. BRANCHEMENT DES ROUTES
 app.use('/api', healthRoute);
-app.use('/apî/auth', authRoute);
+app.use('/api/auth', authRoute);
+app.use('/api/campagnes', campagneRoute);
 
 // 5. DEMARRAGE DU SERVEUR
 const PORT = 3000;
