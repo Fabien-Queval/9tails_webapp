@@ -1,4 +1,5 @@
 import {getDb} from "../db/db";
+import campagneRoute from "../routes/campagneRoute";
 
 const db = getDb();
 type CampagneStatut = 'BROUILLON' | 'ACTIVE' | 'ARCHIVEE';
@@ -83,7 +84,14 @@ export function insertJournal(id_campagne: number, titre: string) {
 // READ
 export function getCampagneById(id_campagne: number): Campagne | null {
     const stmt = db.prepare(`
-    SELECT id_campagne, id_utilisateur, titre, genre, description, maturite, statut, date_creation
+    SELECT id_campagne,
+           id_utilisateur,
+           titre,
+           genre,
+           description,
+           maturite,
+           statut,
+           date_creation
     FROM CAMPAGNE
     WHERE id_campagne = ?
 `);
@@ -93,9 +101,56 @@ export function getCampagneById(id_campagne: number): Campagne | null {
     return campagne ?? null;
 }
 
+export function getCampagnesByUtilisateur(id_utilisateur: number, statut?: CampagneStatut) {
+    let sql = `SELECT id_campagne,
+                            id_utilisateur,
+                            titre,
+                            genre,
+                            description,
+                            maturite,
+                            statut,
+                            date_creation
+                    FROM CAMPAGNE WHERE id_utilisateur = ?`;
+    const params : (number | string)[] = [id_utilisateur];
 
+    if (statut) {
+        sql += ` AND statut = ?`;
+        params.push(statut);
+    }
+
+    return db.prepare(sql).all(...params) as Campagne[];
+}
 
 // UPDATE
+
+export function updateCampagne(id_campagne: number, titre: string, description: string, maturite: number) {
+    const stmt = db.prepare(`
+    UPDATE CAMPAGNE
+    SET titre = ?,
+        description = ?,
+        maturite = ?
+    WHERE id_campagne = ?
+`);
+    const result = stmt.run(titre, description, maturite, id_campagne);
+    if (result.changes === 0) {
+        return null;
+    }
+
+    return getCampagneById(id_campagne)
+}
+
+export function updateStatut(id_campagne: number, statut: CampagneStatut) {
+    const stmt = db.prepare(`
+    UPDATE CAMPAGNE
+    SET statut = ?
+    WHERE id_campagne = ?
+`);
+    const result = stmt.run(statut, id_campagne);
+    if (result.changes === 0) {
+        return null;
+    }
+    return getCampagneById(id_campagne)
+}
 
 // DELETE
 

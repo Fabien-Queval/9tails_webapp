@@ -9,7 +9,7 @@ import {
     insertCampagne,
     insertOrganisationSentinelle,
     insertJournal,
-    Campagne
+    Campagne, getCampagneById
 } from '../dal/campagneDAL';
 
 const db = getDb();
@@ -55,4 +55,20 @@ export function createCampagne(
 
     // On exécute la transaction et on retourne son résultat.
     return transaction();
+}
+
+// Création d'un helper : Cette petite fonction a pour but de vérifier que la campagne
+// Appartient bien ç l'utilisateur. Sinon, erreur !
+
+function assertProprietaireCampagne(id_campagne: number, id_utilisateur: number): Campagne {
+    const campagne = getCampagneById(id_campagne);
+
+    if (!campagne) {
+        throw new Error('Campagne introuvable'); // → 404 dans la route
+    }
+    if (campagne.id_utilisateur !== id_utilisateur) {
+        throw new Error('Accès interdit'); // → 403 dans la route
+    }
+
+    return campagne;
 }
