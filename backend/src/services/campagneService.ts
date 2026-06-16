@@ -9,7 +9,8 @@ import {
     insertCampagne,
     insertOrganisationSentinelle,
     insertJournal,
-    Campagne, getCampagneById
+    Campagne, getCampagneById, deleteCampagneDal, updateStatut, updateCampagneDal,
+    getCampagnesByUtilisateur
 } from '../dal/campagneDAL';
 
 const db = getDb();
@@ -71,4 +72,40 @@ function assertProprietaireCampagne(id_campagne: number, id_utilisateur: number)
     }
 
     return campagne;
+}
+
+export function deleteCampagne(id_campagne: number, id_utilisateur: number): void {
+    assertProprietaireCampagne(id_campagne, id_utilisateur);
+    deleteCampagneDal(id_campagne);
+}
+
+export function archiverCampagne(id_campagne: number, id_utilisateur: number): Campagne | null {
+    const campagne = assertProprietaireCampagne(id_campagne, id_utilisateur);
+    if (campagne.statut !== 'ACTIVE') {
+        throw new Error('Seule une campagne active peut être archivée');
+    }
+    return updateStatut(id_campagne, 'ARCHIVEE');
+}
+
+export function restaurerCampagne(id_campagne: number, id_utilisateur: number): Campagne | null {
+    const campagne = assertProprietaireCampagne(id_campagne, id_utilisateur);
+    if (campagne.statut !== 'ARCHIVEE') {
+        throw new Error('Seule une campagne archivée peut être restaurée')
+    }
+    return updateStatut(id_campagne, 'ACTIVE');
+}
+
+export function updateCampagne(id_campagne: number, id_utilisateur: number, titre: string, description: string | null, maturite: number): Campagne | null {
+    assertProprietaireCampagne(id_campagne, id_utilisateur);
+    return updateCampagneDal(id_campagne , titre , description, maturite);
+}
+
+// LISTE — pas de portier (le WHERE id_utilisateur filtre déjà)
+export function getCampagnes(id_utilisateur: number): Campagne[] {
+    return getCampagnesByUtilisateur(id_utilisateur);
+}
+
+// UNE SEULE — le portier fait tout : existence + propriété + retour
+export function getCampagne(id_campagne: number, id_utilisateur: number): Campagne {
+    return assertProprietaireCampagne(id_campagne, id_utilisateur);
 }

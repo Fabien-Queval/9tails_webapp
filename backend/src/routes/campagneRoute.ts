@@ -1,7 +1,8 @@
 import {Router, Request, Response} from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { createCampagne } from "../services/campagneService";
+import {createCampagne, getCampagne, getCampagnes} from "../services/campagneService";
 import {body, validationResult} from "express-validator";
+
 
 const router = Router();
 
@@ -31,5 +32,39 @@ router.post('/', authMiddleware,
         res.status(400).json({message: error.message});
     }
 });
+
+
+
+// Le async ici ne sert pas vraiment, il n'est pas faux, cependant
+// La faute à better-sqlite3 qui est en fait synchrone.
+// Je préfère le laisser par habitude, en gardant ça en tête poour plus tard.
+router.get('/', authMiddleware, async (req: Request, res: Response) => {
+    const id_utilisateur = req.user!.id_utilisateur;
+    try {
+        const campagnes = getCampagnes(id_utilisateur);
+        res.status(200).json({campagnes});
+    } catch (error: any) {
+        res.status(500).json({message: error.message});
+    }
+})
+
+// Ici, on va dire que l'emplacement n'a pas une valeur fixe
+router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+
+    const id = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+    // Express récupère notre :id dans l'emplacement, et on le stocke.
+    try {
+        res.status(200).json({ campagne: getCampagne(id, id_utilisateur)});
+    } catch (error: any) {
+        res.status(500).json({message: error.message});
+    }
+})
+
+
+
+
+
+
 
 export default router;

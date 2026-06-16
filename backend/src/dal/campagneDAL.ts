@@ -1,8 +1,8 @@
 import {getDb} from "../db/db";
-import campagneRoute from "../routes/campagneRoute";
+
 
 const db = getDb();
-type CampagneStatut = 'BROUILLON' | 'ACTIVE' | 'ARCHIVEE';
+export type CampagneStatut = 'BROUILLON' | 'ACTIVE' | 'ARCHIVEE';
 
 export interface Campagne {
     id_campagne: number;
@@ -123,7 +123,7 @@ export function getCampagnesByUtilisateur(id_utilisateur: number, statut?: Campa
 
 // UPDATE
 
-export function updateCampagne(id_campagne: number, titre: string, description: string, maturite: number) {
+export function updateCampagneDal(id_campagne: number, titre: string, description: string |null, maturite: number) {
     const stmt = db.prepare(`
     UPDATE CAMPAGNE
     SET titre = ?,
@@ -154,3 +154,17 @@ export function updateStatut(id_campagne: number, statut: CampagneStatut) {
 
 // DELETE
 
+ export function deleteCampagneDal(id_campagne: number): boolean {
+    const stmt = db.prepare(`
+    DELETE FROM CAMPAGNE
+    WHERE id_campagne = ?
+ `);
+
+    const result = stmt.run(id_campagne);
+
+    if (result.changes === 0) {
+        throw new Error('Cette campagne n\'existe pas !');
+    }
+
+    return true
+ }
