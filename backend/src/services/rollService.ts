@@ -1,6 +1,7 @@
 
 export interface RollResult {
     test: string
+    difficulte: number
     desResultat: number[]
     success: number
     marge: number
@@ -24,7 +25,7 @@ export function compterResultat(desResultat: number[], difficulte: number): Omit
     const marge    = reussitesNettes - difficulte                                                   // Écart entre ce qu'on a obtenu et ce qu'il fallait obtenir
     const resultat = marge >= 0 ? 'success' : 'fail_forward'                            // Si marge ≥0 → on a atteint ou dépassé la difficulté → success
 
-    return { desResultat, success: reussitesNettes, marge, resultat }                                       // Renvoie tout sauf "test" (exclu par Omit<RollResult, 'test'>)
+    return { desResultat, success: reussitesNettes, marge, resultat, difficulte }                                       // Renvoie tout sauf "test" (exclu par Omit<RollResult, 'test'>)
 }
 
 export function roll(test: string, pool: number, difficulte: number): RollResult {              //

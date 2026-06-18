@@ -1,0 +1,8 @@
+POST http://localhost:3000/api/roll
+Content-Type: application/json
+
+{
+  "test": "Escalade du mur",
+  "pool": 5,
+  "difficulte": 2
+}
