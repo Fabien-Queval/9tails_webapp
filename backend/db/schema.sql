@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS NPC (
   slug            TEXT    NOT NULL,
   nom             TEXT    NOT NULL,
   description     TEXT,
-  fiche_json      TEXT,
+  fiche_json      TEXT    NOT NULL,
   statut          TEXT    NOT NULL,
   relation_pc     INTEGER NOT NULL DEFAULT 0,
   date_creation   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),

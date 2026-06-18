@@ -6,11 +6,11 @@
 
 import { getDb } from '../db/db';
 import {
-    insertCampagne,
-    insertOrganisationSentinelle,
-    insertJournal,
-    Campagne, getCampagneById, deleteCampagneDal, updateStatut, updateCampagneDal,
-    getCampagnesByUtilisateur
+    insertCampagneDal,
+    insertOrganisationSentinelleDal,
+    insertJournalDal,
+    Campagne, getCampagneByIdDal, deleteCampagneDal, updateStatutDal, updateCampagneDal,
+    getCampagnesByUtilisateurDal
 } from '../dal/campagneDAL';
 
 const db = getDb();
@@ -40,15 +40,15 @@ export function createCampagne(
 
         // Étape 1 — Créer la campagne en base.
         // On récupère l'objet complet (avec son id_campagne généré par SQLite).
-        const campagne = insertCampagne(id_utilisateur, titre, genre, description, maturite);
+        const campagne = insertCampagneDal(id_utilisateur, titre, genre, description, maturite);
 
         // Étape 2 — Créer l'organisation sentinelle.
         // Les NPCs sans affiliation auront toujours une FK valide vers cette org.
-        insertOrganisationSentinelle(campagne.id_campagne);
+        insertOrganisationSentinelleDal(campagne.id_campagne);
 
         // Étape 3 — Créer le journal vide lié à la campagne.
         // Le joueur le remplira via ENTREE_JOURNAL au fil de la partie.
-        insertJournal(campagne.id_campagne, titre);
+        insertJournalDal(campagne.id_campagne, titre);
 
         // On retourne la campagne — c'est ce que la route renverra au client.
         return campagne;
@@ -61,8 +61,8 @@ export function createCampagne(
 // Création d'un helper : Cette petite fonction a pour but de vérifier que la campagne
 // Appartient bien ç l'utilisateur. Sinon, erreur !
 
-function assertProprietaireCampagne(id_campagne: number, id_utilisateur: number): Campagne {
-    const campagne = getCampagneById(id_campagne);
+export function assertProprietaireCampagne(id_campagne: number, id_utilisateur: number): Campagne {
+    const campagne = getCampagneByIdDal(id_campagne);
 
     if (!campagne) {
         throw new Error('Campagne introuvable'); // → 404 dans la route
@@ -84,7 +84,7 @@ export function archiverCampagne(id_campagne: number, id_utilisateur: number): C
     if (campagne.statut !== 'ACTIVE') {
         throw new Error('Seule une campagne active peut être archivée');
     }
-    return updateStatut(id_campagne, 'ARCHIVEE');
+    return updateStatutDal(id_campagne, 'ARCHIVEE');
 }
 
 export function restaurerCampagne(id_campagne: number, id_utilisateur: number): Campagne | null {
@@ -92,7 +92,7 @@ export function restaurerCampagne(id_campagne: number, id_utilisateur: number): 
     if (campagne.statut !== 'ARCHIVEE') {
         throw new Error('Seule une campagne archivée peut être restaurée')
     }
-    return updateStatut(id_campagne, 'ACTIVE');
+    return updateStatutDal(id_campagne, 'ACTIVE');
 }
 
 export function updateCampagne(id_campagne: number, id_utilisateur: number, titre: string, description: string | null, maturite: number): Campagne | null {
@@ -102,7 +102,7 @@ export function updateCampagne(id_campagne: number, id_utilisateur: number, titr
 
 // LISTE — pas de portier (le WHERE id_utilisateur filtre déjà)
 export function getCampagnes(id_utilisateur: number): Campagne[] {
-    return getCampagnesByUtilisateur(id_utilisateur);
+    return getCampagnesByUtilisateurDal(id_utilisateur);
 }
 
 // UNE SEULE — le portier fait tout : existence + propriété + retour

@@ -36,11 +36,11 @@ export interface Journal {
 //CRUD : Campagne !
 
 // CREATE
-export function insertCampagne(id_utilisateur: number,
-                               titre: string,
-                               genre: string,
-                               description: string | null,
-                               maturite: number,) {
+export function insertCampagneDal(id_utilisateur: number,
+                                  titre: string,
+                                  genre: string,
+                                  description: string | null,
+                                  maturite: number) {
     const stmt = db.prepare(`
     INSERT INTO CAMPAGNE (id_utilisateur, titre, genre, description, maturite, statut)
     VALUES (?, ?, ?, ?, ?, 'BROUILLON')
@@ -48,7 +48,7 @@ export function insertCampagne(id_utilisateur: number,
 
     const result = stmt.run(id_utilisateur, titre, genre, description, maturite);
 
-    const createdCampagne = getCampagneById(Number(result.lastInsertRowid));
+    const createdCampagne = getCampagneByIdDal(Number(result.lastInsertRowid));
 
     if (!createdCampagne) {
         throw new Error ('Campagne créée, mais impossible à relire en base');
@@ -57,7 +57,7 @@ export function insertCampagne(id_utilisateur: number,
     return createdCampagne
 }
 
-export function insertOrganisationSentinelle(id_campagne: number) {
+export function insertOrganisationSentinelleDal(id_campagne: number) {
     const stmt = db.prepare(`
     INSERT INTO ORGANISATION (id_campagne, slug, nom, description, relation_pc)
     VALUES (?, 'org_aucune', 'Aucune organisation', 'Organisation sentinelle', 0);
@@ -69,7 +69,7 @@ export function insertOrganisationSentinelle(id_campagne: number) {
     }
 }
 
-export function insertJournal(id_campagne: number, titre: string) {
+export function insertJournalDal(id_campagne: number, titre: string) {
     const stmt = db.prepare(`
     INSERT INTO JOURNAL (id_campagne, titre)
     VALUES (?, ?);
@@ -82,7 +82,7 @@ export function insertJournal(id_campagne: number, titre: string) {
 }
 
 // READ
-export function getCampagneById(id_campagne: number): Campagne | null {
+export function getCampagneByIdDal(id_campagne: number): Campagne | null {
     const stmt = db.prepare(`
     SELECT id_campagne,
            id_utilisateur,
@@ -101,7 +101,7 @@ export function getCampagneById(id_campagne: number): Campagne | null {
     return campagne ?? null;
 }
 
-export function getCampagnesByUtilisateur(id_utilisateur: number, statut?: CampagneStatut) {
+export function getCampagnesByUtilisateurDal(id_utilisateur: number, statut?: CampagneStatut) {
     let sql = `SELECT id_campagne,
                             id_utilisateur,
                             titre,
@@ -136,10 +136,10 @@ export function updateCampagneDal(id_campagne: number, titre: string, descriptio
         return null;
     }
 
-    return getCampagneById(id_campagne)
+    return getCampagneByIdDal(id_campagne)
 }
 
-export function updateStatut(id_campagne: number, statut: CampagneStatut) {
+export function updateStatutDal(id_campagne: number, statut: CampagneStatut) {
     const stmt = db.prepare(`
     UPDATE CAMPAGNE
     SET statut = ?
@@ -149,7 +149,7 @@ export function updateStatut(id_campagne: number, statut: CampagneStatut) {
     if (result.changes === 0) {
         return null;
     }
-    return getCampagneById(id_campagne)
+    return getCampagneByIdDal(id_campagne)
 }
 
 // DELETE
