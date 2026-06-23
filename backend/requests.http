@@ -124,3 +124,63 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "titre": "ab", "resume": "Ton : Léger, Objectif : Vol, Contexte : Un marché bondé." }
+
+### ====================  NPC  ====================
+
+### 16. Créer NPC #1 SANS id_organisation → attendu 201 (org = sentinelle, statut ACTIF)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/npcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "slug": "npc_rosalita", "nom": "Rosalita", "description": "Tenancière qui sait tout",
+  "fiche_json": { "role": "informatrice", "ton": "narquois" } }
+
+> {%
+    client.global.set("npcId", response.body.npc.id_npc);
+    client.global.set("orgId", response.body.npc.id_organisation);
+%}
+
+### 17. Lister les NPC de la campagne → attendu 200 (au moins 1)
+GET http://localhost:3000/api/campagnes/{{campagneId}}/npcs
+Authorization: Bearer {{token}}
+
+### 18. Lire NPC #1 par son id → attendu 200
+GET http://localhost:3000/api/npcs/{{npcId}}
+Authorization: Bearer {{token}}
+
+### 19. Modifier NPC #1 → attendu 200 (on réutilise l'org capturée)
+PATCH http://localhost:3000/api/npcs/{{npcId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "id_organisation": {{orgId}}, "nom": "Rosalita la Rouge",
+  "fiche_json": { "role": "informatrice", "ton": "méfiant" },
+  "statut": "INACTIF", "relation_pc": 25 }
+
+### 20. Modifier avec un statut invalide ("VIVANT") → attendu 400 (validation)
+PATCH http://localhost:3000/api/npcs/{{npcId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "id_organisation": {{orgId}}, "nom": "Rosalita",
+  "fiche_json": { "role": "x" }, "statut": "VIVANT", "relation_pc": 0 }
+
+### 21. Créer NPC #2 AVEC id_organisation explicite → attendu 201 (le champ optionnel marche aussi fourni)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/npcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "id_organisation": {{orgId}}, "slug": "npc_chien_bleu", "nom": "Chien Bleu",
+  "description": "Tavernier louche", "fiche_json": { "role": "créancier" } }
+
+### 22. Lire un NPC inexistant (id 999999) → attendu 404
+GET http://localhost:3000/api/npcs/999999
+Authorization: Bearer {{token}}
+
+### 23. Supprimer NPC #1 → attendu 200
+DELETE http://localhost:3000/api/npcs/{{npcId}}
+Authorization: Bearer {{token}}
+
+### 24. Relire NPC #1 après suppression → attendu 404 (confirme la cascade/suppression)
+GET http://localhost:3000/api/npcs/{{npcId}}
+Authorization: Bearer {{token}}

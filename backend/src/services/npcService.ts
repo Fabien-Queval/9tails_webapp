@@ -8,7 +8,7 @@ import {
     NpcStatut,
     updateNpcDal
 } from "../dal/npcDAL";
-import { getCampagneByIdDal } from "../dal/campagneDAL";
+import {getCampagneByIdDal, getOrganisationSentinelleDal} from "../dal/campagneDAL";
 import {assertProprietaireCampagne} from "./campagneService";
 
 
@@ -16,17 +16,18 @@ const db = getDb();
 
 export function createNpc(id_utilisateur: number,
                           id_campagne: number,
-                          id_organisation: number,
+                          id_organisation: number | null,        // <-- était number
                           slug: string,
                           nom: string,
                           description: string | null,
                           fiche_json: string,
 ): Npc {
-
     const transaction = db.transaction((): Npc => {
         assertProprietaireCampagne(id_campagne, id_utilisateur);
 
-        return insertNpcDal(id_campagne, id_organisation, slug, nom, description, fiche_json);
+        const idOrga = id_organisation ?? getOrganisationSentinelleDal(id_campagne);  // <-- défaut sentinelle
+
+        return insertNpcDal(id_campagne, idOrga, slug, nom, description, fiche_json);
     });
 
     return transaction();

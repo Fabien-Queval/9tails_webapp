@@ -263,7 +263,7 @@ router.patch('/:id/personnage', authMiddleware,
 
 router.post('/:id/npcs', authMiddleware,
     [
-        body('id_organisation').isInt(),
+        body('id_organisation').optional().isInt(), // si absent, ne râle pas ; s'il est là, qu'il soit un entier
         body('slug').matches(/^npc_[a-z0-9]+(_[a-z0-9]+)*$/),
         body('nom').isLength({ min: 2, max: 100 }),
         body('description').optional().isLength({ max: 2000 }),
