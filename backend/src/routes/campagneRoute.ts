@@ -13,6 +13,8 @@ import {body, validationResult} from "express-validator";
 import {createPersonnage, getPersonnageByCampagne, updatePersonnage} from "../services/personnageService";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {validateFiche} from "../middleware/validateFiche";
+import {createArc, getArcsByCampagne, terminerArc} from "../services/arcService";
+import {ArcStatut} from "../dal/arcDAL";
 
 
 const router = Router();
@@ -313,6 +315,57 @@ router.get('/:id/npcs', authMiddleware, (req: Request, res: Response) => {
     }
 });
 
+// ----------------------------------------------- Routes de ARC -----------------------------------------------
 
+router.post('/:id/arcs', authMiddleware,
+    [
+        body('titre').isLength({ min: 3, max: 100 }),
+        body('resume').isLength({ min: 1, max: 2000 }),   // le "Ton:.. Objectif:.. Contexte:.." → requis
+    ], handleValidationErrors,
+    (req: Request, res: Response) => {
+        const id_campagne    = Number(req.params.id);
+        const id_utilisateur = req.user!.id_utilisateur;
+        const { titre, resume } = req.body;
+
+        try {
+            const arc = createArc(id_utilisateur, id_campagne, titre, resume);
+            res.status(201).json({ arc });
+        } catch (error: any) {
+            if (error.message === 'Accès interdit')      return res.status(403).json({ message: error.message });
+            if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
+            return res.status(400).json({ message: error.message });
+        }
+    });
+
+router.get('/:id/arcs', authMiddleware, (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+    const statut         = req.query.statut as ArcStatut | undefined;   // <-- query, pas body
+
+    try {
+        const arcs = getArcsByCampagne(id_campagne, id_utilisateur, statut);
+        res.status(200).json({ arcs });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')      return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+router.patch('/:id/arcs/:id_arc/terminer', authMiddleware, (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);       // 1er param
+    const id_arc         = Number(req.params.id_arc);   // 2e param  <-- nouveauté
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        const arc = terminerArc(id_utilisateur, id_campagne, id_arc);
+        res.status(200).json({ arc });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')                          return res.status(403).json({ message: error.message });
+        if (error.message === 'Arc introuvable')                         return res.status(404).json({ message: error.message });
+        if (error.message === 'Seul un arc en cours peut être clôturé')  return res.status(409).json({ message: error.message });
+        return res.status(400).json({ message: error.message });
+    }
+});
 
 export default router;

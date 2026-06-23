@@ -73,3 +73,54 @@ Content-Type: application/json
   "fiche_json": { "version_fiche_pc": "1.0.0", "rang_aventure": 3,
     "caracteristiques": { "corps": 2, "sens": 4, "esprit": 1, "social": 2 },
     "competences": { "discretion": 2, "survie": 1 } } }
+
+### ====================  ARC  ====================
+
+### 7. Créer Arc #1 → attendu 201 (ordre = 1, statut EN_COURS)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "Le Réveil", "resume": "Ton : Sombre, Objectif : Sauvetage, Contexte : Une cité noyée sous la brume." }
+
+> {% client.global.set("arcId1", response.body.arc.id_arc); %}
+
+### 8. Créer Arc #2 (même campagne) → attendu 201 (ordre = 2 : vérifie l'incrément)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "La Descente", "resume": "Ton : Épique, Objectif : Fuite, Contexte : Les égouts s'effondrent." }
+
+> {% client.global.set("arcId2", response.body.arc.id_arc); %}
+
+### 9. Lister les arcs → attendu 200 (tableau de 2, triés par ordre)
+GET http://localhost:3000/api/campagnes/{{campagneId}}/arcs
+Authorization: Bearer {{token}}
+
+### 10. Lister filtré ?statut=EN_COURS → attendu 200 (les 2)
+GET http://localhost:3000/api/campagnes/{{campagneId}}/arcs?statut=EN_COURS
+Authorization: Bearer {{token}}
+
+### 11. Terminer Arc #1 → attendu 200 (statut passe à TERMINE)
+PATCH http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId1}}/terminer
+Authorization: Bearer {{token}}
+
+### 12. Re-terminer Arc #1 → attendu 409 (déjà terminé : transition illégale)
+PATCH http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId1}}/terminer
+Authorization: Bearer {{token}}
+
+### 13. Lister filtré ?statut=TERMINE → attendu 200 (seulement l'Arc #1)
+GET http://localhost:3000/api/campagnes/{{campagneId}}/arcs?statut=TERMINE
+Authorization: Bearer {{token}}
+
+### 14. Terminer un arc inexistant (id 999999) → attendu 404 (garde IDOR / introuvable)
+PATCH http://localhost:3000/api/campagnes/{{campagneId}}/arcs/999999/terminer
+Authorization: Bearer {{token}}
+
+### 15. Créer un arc avec titre trop court ("ab") → attendu 400 (validation)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "ab", "resume": "Ton : Léger, Objectif : Vol, Contexte : Un marché bondé." }
