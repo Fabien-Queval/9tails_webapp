@@ -1,22 +1,28 @@
 -- =============================================================================
 -- 9TStory V0 — Script DDL SQLite
--- Généré depuis MLD_canvas.md — version finale (09/06/2026)
+-- Genere depuis MLD_canvas.md — version finale (09/06/2026)
+-- MAJ 16/06/2026 : ajout des ON DELETE CASCADE (composition campagne)
 -- =============================================================================
--- ⚠️  Ce fichier doit être exécuté via db.exec() dans db.js (better-sqlite3)
--- ⚠️  AVANT d'exécuter ce DDL, dans db.js :
---     1. db.pragma('foreign_keys = ON')          → enforce les FKs
---     2. db.function('regexp', ...)              → active les CHECK REGEXP
+-- Ce fichier doit etre execute via db.exec() dans db.js (better-sqlite3)
+-- AVANT d'executer ce DDL, dans db.js :
+--     1. db.pragma('foreign_keys = ON')          -> enforce les FKs
+--     2. db.function('regexp', ...)              -> active les CHECK REGEXP
 -- =============================================================================
--- Ordre de création (dépendances FK) :
--- UTILISATEUR → CAMPAGNE → ARC → CHECKPOINT
--- → LIEU / OBJET / ORGANISATION
--- → PERSONNAGE → JOURNAL → TRAIT → NPC
--- → INVARIANT → ENTREE_JOURNAL → MEMOIRE
+-- Regle de suppression (DEL) :
+--   - Toutes les FK pointant vers le CONTENU d'une campagne sont ON DELETE
+--     CASCADE : la campagne est la racine de composition, sa suppression
+--     emporte tout son contenu (arcs, checkpoints, lieux, objets, orgs,
+--     personnages, journal, npc, invariants, entrees, memoires, traits).
+--   - Les 2 FK vers UTILISATEUR restent NO ACTION (defaut) : l'utilisateur
+--     est le parent, il n'appartient pas a la campagne.
+-- =============================================================================
+-- Ordre de creation (dependances FK) :
+-- UTILISATEUR -> CAMPAGNE -> ARC -> CHECKPOINT
+-- -> LIEU / OBJET / ORGANISATION
+-- -> PERSONNAGE -> JOURNAL -> TRAIT -> NPC
+-- -> INVARIANT -> ENTREE_JOURNAL -> MEMOIRE
 -- =============================================================================
 
--- =============================================================================
--- 1. UTILISATEUR
--- =============================================================================
 CREATE TABLE IF NOT EXISTS UTILISATEUR (
   id_utilisateur    INTEGER PRIMARY KEY AUTOINCREMENT,
   pseudo            TEXT    NOT NULL,
@@ -26,9 +32,6 @@ CREATE TABLE IF NOT EXISTS UTILISATEUR (
   CONSTRAINT UK_UTILISATEUR_EMAIL UNIQUE (email)
 );
 
--- =============================================================================
--- 2. CAMPAGNE
--- =============================================================================
 CREATE TABLE IF NOT EXISTS CAMPAGNE (
   id_campagne    INTEGER PRIMARY KEY AUTOINCREMENT,
   id_utilisateur INTEGER NOT NULL REFERENCES UTILISATEUR(id_utilisateur),
@@ -42,12 +45,9 @@ CREATE TABLE IF NOT EXISTS CAMPAGNE (
   CONSTRAINT CK_CAMPAGNE_MATURITE CHECK (maturite IN (12, 16, 18))
 );
 
--- =============================================================================
--- 3. ARC
--- =============================================================================
 CREATE TABLE IF NOT EXISTS ARC (
   id_arc        INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
+  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
   titre         TEXT    NOT NULL,
   resume        TEXT,
   statut        TEXT    NOT NULL,
@@ -58,12 +58,9 @@ CREATE TABLE IF NOT EXISTS ARC (
   CONSTRAINT CK_ARC_ORDRE_POSITIF    CHECK  (ordre > 0)
 );
 
--- =============================================================================
--- 4. CHECKPOINT
--- =============================================================================
 CREATE TABLE IF NOT EXISTS CHECKPOINT (
   id_checkpoint INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_arc        INTEGER NOT NULL REFERENCES ARC(id_arc),
+  id_arc        INTEGER NOT NULL REFERENCES ARC(id_arc) ON DELETE CASCADE,
   titre         TEXT    NOT NULL,
   contenu       TEXT    NOT NULL,
   resume        TEXT,
@@ -73,12 +70,9 @@ CREATE TABLE IF NOT EXISTS CHECKPOINT (
   CONSTRAINT CK_CHECKPOINT_ORDRE_POSITIF CHECK (ordre > 0)
 );
 
--- =============================================================================
--- 5. LIEU
--- =============================================================================
 CREATE TABLE IF NOT EXISTS LIEU (
   id_lieu       INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
+  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
   slug          TEXT    NOT NULL,
   nom           TEXT    NOT NULL,
   description   TEXT    NOT NULL,
@@ -87,12 +81,9 @@ CREATE TABLE IF NOT EXISTS LIEU (
   CONSTRAINT CK_LIEU_SLUG_FORMAT     CHECK  (slug REGEXP '^loc_[a-z0-9]+(_[a-z0-9]+)*$')
 );
 
--- =============================================================================
--- 6. OBJET
--- =============================================================================
 CREATE TABLE IF NOT EXISTS OBJET (
   id_objet      INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
+  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
   slug          TEXT    NOT NULL,
   nom           TEXT    NOT NULL,
   description   TEXT    NOT NULL,
@@ -103,12 +94,9 @@ CREATE TABLE IF NOT EXISTS OBJET (
   CONSTRAINT CK_OBJET_EFFET_RANG_RANGE   CHECK  (effet_rang BETWEEN -2 AND 2)
 );
 
--- =============================================================================
--- 7. ORGANISATION
--- =============================================================================
 CREATE TABLE IF NOT EXISTS ORGANISATION (
   id_organisation INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne     INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
+  id_campagne     INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
   slug            TEXT    NOT NULL,
   nom             TEXT    NOT NULL,
   description     TEXT    NOT NULL,
@@ -119,12 +107,9 @@ CREATE TABLE IF NOT EXISTS ORGANISATION (
   CONSTRAINT CK_ORGANISATION_RELATION_PC_RANGE   CHECK  (relation_pc BETWEEN -100 AND 100)
 );
 
--- =============================================================================
--- 8. PERSONNAGE (PC)
--- =============================================================================
 CREATE TABLE IF NOT EXISTS PERSONNAGE (
   id_personnage  INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne    INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
+  id_campagne    INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
   id_utilisateur INTEGER NOT NULL REFERENCES UTILISATEUR(id_utilisateur),
   slug_pc        TEXT    NOT NULL,
   nom            TEXT    NOT NULL,
@@ -136,24 +121,18 @@ CREATE TABLE IF NOT EXISTS PERSONNAGE (
   CONSTRAINT CK_PERSONNAGE_SLUG_PC_FORMAT         CHECK  (slug_pc REGEXP '^pc_[a-z0-9]+(_[a-z0-9]+)*$')
 );
 
--- =============================================================================
--- 9. JOURNAL
--- =============================================================================
 CREATE TABLE IF NOT EXISTS JOURNAL (
   id_journal    INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
+  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
   titre         TEXT    NOT NULL,
   description   TEXT,
   date_creation TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   CONSTRAINT UK_JOURNAL_CAMPAGNE UNIQUE (id_campagne)
 );
 
--- =============================================================================
--- 10. TRAIT
--- =============================================================================
 CREATE TABLE IF NOT EXISTS TRAIT (
   id_trait      INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_personnage INTEGER NOT NULL REFERENCES PERSONNAGE(id_personnage),
+  id_personnage INTEGER NOT NULL REFERENCES PERSONNAGE(id_personnage) ON DELETE CASCADE,
   code_trait    TEXT    NOT NULL,
   type_trait    TEXT    NOT NULL,
   description   TEXT    NOT NULL,
@@ -163,17 +142,14 @@ CREATE TABLE IF NOT EXISTS TRAIT (
   CONSTRAINT CK_TRAIT_TYPE              CHECK  (type_trait IN ('POSITIF', 'NEGATIF', 'NARRATIF', 'CONTEXTUEL'))
 );
 
--- =============================================================================
--- 11. NPC
--- =============================================================================
 CREATE TABLE IF NOT EXISTS NPC (
   id_npc          INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne     INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
-  id_organisation INTEGER NOT NULL REFERENCES ORGANISATION(id_organisation),
+  id_campagne     INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
+  id_organisation INTEGER NOT NULL REFERENCES ORGANISATION(id_organisation) ON DELETE CASCADE,
   slug            TEXT    NOT NULL,
   nom             TEXT    NOT NULL,
   description     TEXT,
-  fiche_json      TEXT,
+  fiche_json      TEXT    NOT NULL,
   statut          TEXT    NOT NULL,
   relation_pc     INTEGER NOT NULL DEFAULT 0,
   date_creation   TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
@@ -183,13 +159,10 @@ CREATE TABLE IF NOT EXISTS NPC (
   CONSTRAINT CK_NPC_RELATION_PC_RANGE    CHECK  (relation_pc BETWEEN -100 AND 100)
 );
 
--- =============================================================================
--- 12. INVARIANT
--- =============================================================================
 CREATE TABLE IF NOT EXISTS INVARIANT (
   id_invariant  INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne),
-  id_checkpoint INTEGER NOT NULL REFERENCES CHECKPOINT(id_checkpoint),
+  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
+  id_checkpoint INTEGER NOT NULL REFERENCES CHECKPOINT(id_checkpoint) ON DELETE CASCADE,
   titre         TEXT    NOT NULL,
   contenu       TEXT    NOT NULL,
   type_cible    TEXT    NOT NULL,
@@ -199,13 +172,10 @@ CREATE TABLE IF NOT EXISTS INVARIANT (
   CONSTRAINT CK_INVARIANT_SLUG_CIBLE_FORMAT  CHECK (slug_cible REGEXP '^(npc|pc|obj|loc|org)_[a-z0-9]+(_[a-z0-9]+)*$')
 );
 
--- =============================================================================
--- 13. ENTREE_JOURNAL
--- =============================================================================
 CREATE TABLE IF NOT EXISTS ENTREE_JOURNAL (
   id_entree_journal INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_journal        INTEGER NOT NULL REFERENCES JOURNAL(id_journal),
-  id_checkpoint     INTEGER          REFERENCES CHECKPOINT(id_checkpoint),
+  id_journal        INTEGER NOT NULL REFERENCES JOURNAL(id_journal) ON DELETE CASCADE,
+  id_checkpoint     INTEGER          REFERENCES CHECKPOINT(id_checkpoint) ON DELETE CASCADE,
   titre             TEXT    NOT NULL,
   contenu           TEXT    NOT NULL,
   type_entree       TEXT    NOT NULL,
@@ -217,13 +187,10 @@ CREATE TABLE IF NOT EXISTS ENTREE_JOURNAL (
   CONSTRAINT CK_ENTREE_JOURNAL_CP_COHERENCE    CHECK  (type_entree <> 'CHECKPOINT' OR id_checkpoint IS NOT NULL)
 );
 
--- =============================================================================
--- 14. MEMOIRE
--- =============================================================================
 CREATE TABLE IF NOT EXISTS MEMOIRE (
   id_memoire    INTEGER PRIMARY KEY AUTOINCREMENT,
-  id_npc        INTEGER NOT NULL REFERENCES NPC(id_npc),
-  id_checkpoint INTEGER NOT NULL REFERENCES CHECKPOINT(id_checkpoint),
+  id_npc        INTEGER NOT NULL REFERENCES NPC(id_npc) ON DELETE CASCADE,
+  id_checkpoint INTEGER NOT NULL REFERENCES CHECKPOINT(id_checkpoint) ON DELETE CASCADE,
   slug_memoire  TEXT    NOT NULL,
   cible_type    TEXT,
   cible_slug    TEXT,

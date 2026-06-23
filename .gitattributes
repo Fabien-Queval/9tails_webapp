@@ -1,0 +1,14 @@
+# Normalisation des fins de ligne.
+# Git stocke tout en LF dans le dépôt ; checkout en LF partout.
+# Évite le bruit CRLF<->LF dans les diffs (Windows/WebStorm).
+* text=auto eol=lf
+
+# Fichiers binaires : jamais normalisés.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.pdf  binary
+*.ico  binary
+*.db   binary
+*.sqlite binary
