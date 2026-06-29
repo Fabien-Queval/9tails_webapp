@@ -15,6 +15,7 @@ import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {validateFiche} from "../middleware/validateFiche";
 import {createArc, getArcsByCampagne, terminerArc} from "../services/arcService";
 import {ArcStatut} from "../dal/arcDAL";
+import {createCheckpoint} from "../services/checkpointService";
 
 
 const router = Router();
@@ -366,6 +367,30 @@ router.patch('/:id/arcs/:id_arc/terminer', authMiddleware, (req: Request, res: R
         if (error.message === 'Seul un arc en cours peut être clôturé')  return res.status(409).json({ message: error.message });
         return res.status(400).json({ message: error.message });
     }
+});
+
+// ----------------------------------------------- Routes de CHECKPOINT -----------------------------------------------
+
+router.post('/:id/arcs/:id_arc/checkpoints', authMiddleware,
+    [
+        body('titre').isLength({ min: 3, max: 100 }),
+        body('contenu').isLength({ min: 1, max: 10000 }),   // narratif → généreux, ajuste à ton goût
+        body('resume').isLength({ min: 1 }).isLength({ max: 2000 }),
+    ], handleValidationErrors, (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);
+    const id_arc     = Number(req.params.id_arc);
+    const id_utilisateur = req.user!.id_utilisateur;
+    const { titre, contenu, resume } = req.body;
+
+    try {
+        const checkpoint = createCheckpoint({id_utilisateur, id_campagne, id_arc, titre, contenu, resume,});
+        res.status(201).json({ checkpoint });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')                          return res.status(403).json({ message: error.message });
+        if (error.message === 'Arc introuvable')                         return res.status(404).json({ message: error.message });
+        return res.status(400).json({ message: error.message });
+    }
+
 });
 
 export default router;
