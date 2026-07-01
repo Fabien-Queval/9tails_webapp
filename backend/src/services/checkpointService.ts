@@ -1,7 +1,10 @@
 import {getDb} from "../db/db";
-import {Checkpoint, getCheckpointByIdDal, getMaxOrdreCheckpointDal, insertCheckpointDal} from "../dal/checkpointDAL";
+import {Checkpoint, getMaxOrdreCheckpointDal, insertCheckpointDal} from "../dal/checkpointDAL";
 import {assertProprietaireCampagne} from "./campagneService";
 import {getArcByIdDal} from "../dal/arcDAL";
+import {MemoireProposee} from "../schema/memoireSchema";
+import {applyMem} from "./memoireService";
+import { Memoire } from "../dal/memoireDAL";
 
 const db = getDb();
 
@@ -12,9 +15,12 @@ export function createCheckpoint(params: {
                                     titre: string;
                                     contenu: string;
                                     resume: string;
-                                        }): Checkpoint {
+                                    memoires?: MemoireProposee[]
+}): { checkpoint: Checkpoint, memoires: Memoire[] } {
     const {id_utilisateur, id_campagne, id_arc, titre, contenu, resume} = params;       //Notion super sympa : On évite de se perdre
-    const transaction = db.transaction((): Checkpoint => {
+    const memoires = params.memoires ?? [];
+
+    const transaction = db.transaction((): { checkpoint: Checkpoint, memoires: Memoire[] } => {
     assertProprietaireCampagne(id_campagne, id_utilisateur);
 
     const arc = getArcByIdDal(id_arc);
@@ -23,8 +29,10 @@ export function createCheckpoint(params: {
     }
 
     const ordre = getMaxOrdreCheckpointDal(id_campagne) + 1;
+    const checkpoint = insertCheckpointDal(id_arc, titre, contenu, resume, ordre);
+    const memoiresCreees = applyMem(id_campagne, checkpoint.id_checkpoint, ordre, memoires);
 
-    return insertCheckpointDal(id_arc, titre, contenu, resume, ordre);
+    return { checkpoint, memoires: memoiresCreees };
 });
 
     return transaction();

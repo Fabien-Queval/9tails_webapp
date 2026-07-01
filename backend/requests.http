@@ -273,3 +273,94 @@ Content-Type: application/json
         client.assert(response.status === 404, "statut reçu : " + response.status);
     });
 %}
+
+### 31. Checkpoint AVEC un lot de 2 mémoires (npc_chien_bleu) → 201, 2 mémoires créées
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "La rencontre au marché",
+  "contenu": "Le groupe croise Chien Bleu entre deux étals ; méfiance et curiosité se mêlent.",
+  "resume": "Première vraie rencontre avec Chien Bleu.",
+  "memoires": [
+    { "npc": "npc_chien_bleu", "nature": "inconnu", "cible_type": "PC", "cible_slug": "pc_fabien", "contenu": "Un roturier qui traîne trop près. À surveiller." },
+    { "npc": "npc_chien_bleu", "nature": "amusant", "cible_type": "PC", "cible_slug": "pc_fabien", "contenu": "Contre toute attente, il la fait rire." }
+  ]
+}
+
+> {%
+    client.test("31 → statut 201", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.test("31 → 2 mémoires créées", function () {
+        client.assert(response.body.memoires.length === 2, "nb mémoires : " + response.body.memoires.length);
+    });
+    client.test("31 → slug conforme au CHECK", function () {
+        const slug = response.body.memoires[0].slug_memoire;
+        client.assert(/^mem_npc_chien_bleu_x_pc_fabien_inconnu_cp\d{3}$/.test(slug), "slug reçu : " + slug);
+    });
+%}
+
+### 32. Rejouer la MÊME mémoire sur un NOUVEAU checkpoint → 201 (cpNNN scopé campagne = pas de collision UNIQUE)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "Retrouvailles au marché",
+  "contenu": "Chien Bleu recroise le groupe ; la méfiance n'a pas fondu.",
+  "resume": "Deuxième passage, même méfiance.",
+  "memoires": [
+    { "npc": "npc_chien_bleu", "nature": "inconnu", "cible_type": "PC", "cible_slug": "pc_fabien", "contenu": "Toujours ce roturier collant." }
+  ]
+}
+
+> {%
+    client.test("32 → statut 201 (aucune collision UNIQUE)", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.test("32 → 1 mémoire créée", function () {
+        client.assert(response.body.memoires.length === 1, "nb : " + response.body.memoires.length);
+    });
+%}
+
+### 33. Mémoire sur un NPC inexistant (npc_fantome) → 404 (garde IDOR dans applyMem, transaction annulée)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "Le fantôme",
+  "contenu": "On tente d'attacher une mémoire à un NPC qui n'existe pas.",
+  "resume": "Ne devrait rien créer.",
+  "memoires": [
+    { "npc": "npc_fantome", "nature": "inconnu", "cible_type": null, "cible_slug": null, "contenu": "Mémoire orpheline." }
+  ]
+}
+
+> {%
+    client.test("33 → statut 404 (NPC introuvable)", function () {
+        client.assert(response.status === 404, "statut reçu : " + response.status);
+    });
+%}
+
+### 34. Cible à moitié remplie (type sans slug) → 400 (refine tout-ou-rien, frontière HTTP)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "Cible bancale",
+  "contenu": "Une cible avec le type mais pas le slug.",
+  "resume": "Doit être rejetée avant la base.",
+  "memoires": [
+    { "npc": "npc_chien_bleu", "nature": "inconnu", "cible_type": "PC", "cible_slug": null, "contenu": "Cible incohérente." }
+  ]
+}
+
+> {%
+    client.test("34 → statut 400 (cible tout-ou-rien)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}

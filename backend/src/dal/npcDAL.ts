@@ -66,6 +66,27 @@ export function getNpcByIdDal(id_npc: number):Npc | null {
     return npc ?? null;
 }
 
+export function getNpcBySlugDal(id_campagne: number, slug: string):Npc | null {
+    const stmt = db.prepare(`
+    SELECT  id_npc,
+            id_campagne,
+            id_organisation,
+            slug,
+            nom,
+            description,
+            fiche_json,
+            statut,
+            relation_pc,
+            date_creation
+    FROM NPC
+    WHERE id_campagne = ? AND slug = ?
+    `);
+
+    const npc = stmt.get(id_campagne, slug) as Npc | undefined;
+
+    return npc ?? null;
+}
+
 export function getNpcsByCampagneDal(id_campagne: number, statut?: NpcStatut) {
     // Requête de base : on récupère les NPC de la campagne.
     let sql = `SELECT id_npc,
@@ -122,4 +143,5 @@ export function deleteNpcDal(id_npc: number):boolean {
     }
     return true
 }
+
 

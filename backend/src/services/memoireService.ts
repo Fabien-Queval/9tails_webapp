@@ -4,6 +4,11 @@
 // La pose en base en lot (applyMem) viendra APRÈS le checkpoint : je la laisse en
 // esquisse commentée tout en bas, pour me souvenir où ça va.
 
+
+import { insertMemoireDal, Memoire } from '../dal/memoireDAL';
+import { getNpcBySlugDal } from '../dal/npcDAL';
+import { MemoireProposee } from '../schema/memoireSchema';
+
 /**
  * Je construis le slug d'une mémoire à partir de ses morceaux.
  * Fonction PURE : je reçois des valeurs, je rends une chaîne, je ne touche à rien d'autre
@@ -35,20 +40,45 @@ export function construireSlugMemoire(
     return morceaux.filter(Boolean).join("_");
 }
 
-/* ---------------------------------------------------------------------------
-   ESQUISSE — applyMem  (À FINALISER APRÈS checkpointDAL/Service)
-   Je la laisse en commentaire : elle ne compile pas encore, le checkpoint n'a pas
-   de code. Mais je veux garder le plan sous les yeux.
+/**
+ * Je pose en base, EN LOT, les N mémoires nées d'un checkpoint.
+ * Je ne crée PAS de transaction ici : Je suis appelé à l'intérieur de la
+ * TRANSACTION qui crée le checkpoint (c'est lui qui tient le "tout ou rien")
+ */
 
-   But : poser en base, EN LOT, les N mémoires d'un checkpoint, dans UNE seule
-   transaction (tout ou rien). Elle ne vivra pas seule -> elle sera appelée
-   À L'INTÉRIEUR de la transaction qui crée le checkpoint.
 
-   import { insertMemoireDal } from "../dal/memoireDAL";
+export function applyMem(
+    id_campagne: number,
+    id_checkpoint: number,
+    ordre: number,
+    memoires: MemoireProposee[]
+): Memoire[] {
+    // map : pour chaque mémoire proposée, je renvoie la ligne créée → j'obtiens un Memoire[]
+    return memoires.map((m) => {
+    // 1. Je résous le NPC porteur, SCOPE à la campagne (= mon IDOR)
+    //  Absent ici ? Je refuse : le LLM a pu inventer des conneries
+    const npc = getNpcBySlugDal(id_campagne, m.npc);
+    if(!npc) {
+        throw new Error('NPC introuvable'); // → 404 côté route
+    }
 
-   Pour chaque mémoire proposée (déjà validée par le validator) :
-     - je connais l'ordre du checkpoint courant (il vient du checkpoint)
-     - je construis le slug : construireSlugMemoire(npcKey, nature, ordre, cibleSlug)
-     - j'insère : insertMemoireDal(id_npc, id_checkpoint, slug, contenu, cible_type, cible_slug)
-   Le tout enveloppé dans db.transaction(...).
---------------------------------------------------------------------------- */
+    // 2. Je prends le nom NU depuis le NPC trouvé en base (la vérité, pas la châîne du LLM)
+    //  construireSlugMemoire préfixe déjà "mem_npc_", donc j'enlève un "npc_" éventuel.
+    const npcKey = npc.slug.replace(/^npc_/, '');
+
+    // 3. J'assemble le slug, garanti conforme au CHECK de la base.
+    const slug = construireSlugMemoire(npcKey, m.nature, ordre, m.cible_slug);
+
+    // 4. J'insère (ordre des args = signature du DAL).
+
+    return insertMemoireDal(
+        npc.id_npc,
+        id_checkpoint,
+        slug,
+        m.contenu,
+        m.cible_type,
+        m.cible_slug,
+    );
+
+});
+}

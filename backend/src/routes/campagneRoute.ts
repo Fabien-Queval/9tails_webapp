@@ -16,6 +16,7 @@ import {validateFiche} from "../middleware/validateFiche";
 import {createArc, getArcsByCampagne, terminerArc} from "../services/arcService";
 import {ArcStatut} from "../dal/arcDAL";
 import {createCheckpoint} from "../services/checkpointService";
+import {MemoiresProposeesSchema} from "../schema/memoireSchema";
 
 
 const router = Router();
@@ -382,15 +383,24 @@ router.post('/:id/arcs/:id_arc/checkpoints', authMiddleware,
     const id_utilisateur = req.user!.id_utilisateur;
     const { titre, contenu, resume } = req.body;
 
+        const parsed = MemoiresProposeesSchema.safeParse(req.body.memoires ?? []);
+        if (!parsed.success) {
+            return res.status(400).json({ errors: parsed.error.issues });
+        }
+        const memoires = parsed.data;   // le tableau validé, prêt à passer au service
+
     try {
-        const checkpoint = createCheckpoint({id_utilisateur, id_campagne, id_arc, titre, contenu, resume,});
-        res.status(201).json({ checkpoint });
+        const result = createCheckpoint({id_utilisateur, id_campagne, id_arc, titre, contenu, resume, memoires});
+        res.status(201).json(result);           //result = { checkpopint; memoires } → envoyé tel quel
     } catch (error: any) {
         if (error.message === 'Accès interdit')                          return res.status(403).json({ message: error.message });
         if (error.message === 'Arc introuvable')                         return res.status(404).json({ message: error.message });
+        if (error.message === 'Campagne introuvable')                    return res.status(404).json({ message: error.message });
+        if (error.message === 'NPC introuvable')                         return res.status(404).json({ message: error.message });
         return res.status(400).json({ message: error.message });
     }
 
 });
+
 
 export default router;
