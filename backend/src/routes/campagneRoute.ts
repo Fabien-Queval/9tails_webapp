@@ -17,6 +17,7 @@ import {createArc, getArcsByCampagne, terminerArc} from "../services/arcService"
 import {ArcStatut} from "../dal/arcDAL";
 import {createCheckpoint} from "../services/checkpointService";
 import {MemoiresProposeesSchema} from "../schema/memoireSchema";
+import {proposerMemoiresPourScene} from "../services/memoireService";
 
 
 const router = Router();
@@ -73,6 +74,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
     try {
         res.status(200).json({ campagne: getCampagne(id, id_utilisateur)});
     } catch (error: any) {
+        // console.error('Échec LLM (proposer-memoires) :', error);   // ← temporaire, pour voir la vraie cause
         if (error.message === 'Accès interdit') {
             return res.status(403).json({message: error.message});
         }
@@ -402,5 +404,26 @@ router.post('/:id/arcs/:id_arc/checkpoints', authMiddleware,
 
 });
 
+// ----------------------------------------------- Routes de MEMOIREPROPOSEE -----------------------------------------------
+
+router.post('/:id/proposer-memoires', authMiddleware,
+    [
+    body('contexteScene').isString().isLength({ min: 1, max: 10000}),
+    ],
+    handleValidationErrors, async (req: Request, res: Response)=> {
+    const { contexteScene } = req.body;
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        const propositionMemoires = await proposerMemoiresPourScene(id_campagne, id_utilisateur, contexteScene);
+        res.status(200).json({ propositionMemoires });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')                          return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable')                    return res.status(404).json({ message: error.message });
+
+        return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
+    }
+    });
 
 export default router;

@@ -364,3 +364,48 @@ Content-Type: application/json
         client.assert(response.status === 400, "statut reçu : " + response.status);
     });
 %}
+
+### ============ PROPOSITION DE MÉMOIRES (LLM) ============
+### Rappel : lance d'abord 0bis (login) et 1 (créer campagne) si {{token}} / {{campagneId}} ne sont plus valides.
+
+### 35. contexteScene VIDE → 400 (validator, AUCUN appel LLM)   [GRATUIT]
+POST http://localhost:3000/api/campagnes/{{campagneId}}/proposer-memoires
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "contexteScene": "" }
+
+> {%
+    client.test("35 → statut 400 (validator)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 36. Campagne inexistante (id 999999) → la garde IDOR lève AVANT le LLM   [GRATUIT]
+POST http://localhost:3000/api/campagnes/999999/proposer-memoires
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "contexteScene": "Une scène quelconque, mais la campagne n'existe pas." }
+
+> {%
+    client.test("36 → la garde lève (404/403), pas d'appel LLM", function () {
+        client.assert(response.status === 404 || response.status === 403, "statut reçu : " + response.status);
+    });
+%}
+
+### 37. Happy path → 200 + propositionMemoires   [⚠️ PAYANT : 1 appel LLM réel]
+POST http://localhost:3000/api/campagnes/{{campagneId}}/proposer-memoires
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "contexteScene": "Rosalita, une marchande du marché, a vu le héros la sauver d'une embuscade. Elle lui en est reconnaissante et lui fait désormais confiance. Un garde nommé Chien Bleu observait la scène de loin, méfiant." }
+
+> {%
+    client.test("37 → statut 200", function () {
+        client.assert(response.status === 200, "statut reçu : " + response.status);
+    });
+    client.test("37 → propositionMemoires est un tableau", function () {
+        client.assert(Array.isArray(response.body.propositionMemoires), "reçu : " + JSON.stringify(response.body));
+    });
+%}

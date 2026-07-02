@@ -8,6 +8,8 @@
 import { insertMemoireDal, Memoire } from '../dal/memoireDAL';
 import { getNpcBySlugDal } from '../dal/npcDAL';
 import { MemoireProposee } from '../schema/memoireSchema';
+import {assertProprietaireCampagne} from "./campagneService";
+import {proposerMemoires} from "./llmService";
 
 /**
  * Je construis le slug d'une mémoire à partir de ses morceaux.
@@ -81,4 +83,12 @@ export function applyMem(
     );
 
 });
+}
+
+export async function proposerMemoiresPourScene(id_campagne: number, id_utilisateur: number, contexteScene: string): Promise<MemoireProposee[]> {
+    assertProprietaireCampagne(id_campagne, id_utilisateur);
+
+    const propositionMemoires = await proposerMemoires(contexteScene);
+
+    return propositionMemoires;
 }

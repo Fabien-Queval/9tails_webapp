@@ -18,3 +18,12 @@ export const MemoiresProposeesSchema = z.array(MemoireProposeeSchema);
 
 // le TYPE d'une mémoire (étiquette de compilation), dérivé du schéma
 export type MemoireProposee = z.infer<typeof MemoireProposeeSchema>;
+
+// La SORTIE attendue du LLM : un OBJET qui enveloppe le tableau.
+// Pourquoi un objet et pas le tableau nu ? Les sorties structurées de l'API
+// veulent un objet à la racine. On réutilise le schéma du tableau À L'INTÉRIEUR
+// (rien à changer ailleurs : on tirera juste .memoires de la réponse).
+export const SortieLLMSchema = z.object({
+    vehiculeMemoires: MemoiresProposeesSchema,
+});
+export type SortieLLM = z.infer<typeof SortieLLMSchema>;
