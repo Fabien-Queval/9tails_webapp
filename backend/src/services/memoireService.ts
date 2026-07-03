@@ -10,6 +10,7 @@ import { getNpcBySlugDal } from '../dal/npcDAL';
 import { MemoireProposee } from '../schema/memoireSchema';
 import {assertProprietaireCampagne} from "./campagneService";
 import {proposerMemoires} from "./llmService";
+import {slugNpc} from "../utils/slug";
 
 /**
  * Je construis le slug d'une mémoire à partir de ses morceaux.
@@ -56,10 +57,10 @@ export function applyMem(
     memoires: MemoireProposee[]
 ): Memoire[] {
     // map : pour chaque mémoire proposée, je renvoie la ligne créée → j'obtiens un Memoire[]
-    return memoires.map((m) => {
+    return memoires.map((memProposee) => {
     // 1. Je résous le NPC porteur, SCOPE à la campagne (= mon IDOR)
     //  Absent ici ? Je refuse : le LLM a pu inventer des conneries
-    const npc = getNpcBySlugDal(id_campagne, m.npc);
+    const npc = getNpcBySlugDal(id_campagne, slugNpc(memProposee.npc));
     if(!npc) {
         throw new Error('NPC introuvable'); // → 404 côté route
     }
@@ -69,7 +70,7 @@ export function applyMem(
     const npcKey = npc.slug.replace(/^npc_/, '');
 
     // 3. J'assemble le slug, garanti conforme au CHECK de la base.
-    const slug = construireSlugMemoire(npcKey, m.nature, ordre, m.cible_slug);
+    const slug = construireSlugMemoire(npcKey, memProposee.nature, ordre, memProposee.cible_slug);
 
     // 4. J'insère (ordre des args = signature du DAL).
 
@@ -77,9 +78,9 @@ export function applyMem(
         npc.id_npc,
         id_checkpoint,
         slug,
-        m.contenu,
-        m.cible_type,
-        m.cible_slug,
+        memProposee.contenu,
+        memProposee.cible_type,
+        memProposee.cible_slug,
     );
 
 });

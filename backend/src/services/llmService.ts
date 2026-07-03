@@ -6,18 +6,18 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
-import { SortieLLMSchema, MemoireProposee } from '../schema/memoireSchema';
+import {MemoireProposee, SortieLLMSchema} from '../schema/memoireSchema';
 
 // Le client lit tout seul ma clé dans process.env.ANTHROPIC_API_KEY.
 // (Donc dotenv doit être chargé AVANT que ce module s'exécute — cf. poc-llm.ts.)
-const client = new Anthropic();
+
 
 // Les règles + le CONTRAT. Le "system" est le paramètre où je cadre le LLM.
 // Point de départ minimal pour le PoC — tu l'enrichiras avec les vraies règles du monde.
 const SYSTEME = `Tu es l'assistant d'un maître de jeu de JDR.
 À partir d'une scène de jeu, tu extrais les MÉMOIRES que les PNJ en gardent.
 Réponds UNIQUEMENT via le format structuré demandé.
-- npc : le slug du PNJ concerné, NU (ex. "rosalita"), sans préfixe "npc_".
+- npc : le prénom du PNJ concerné, NU (ex. "rosalita"), sans nom de famille.
 - nature : un tag court en minuscules_avec_underscores (ex. "confiance_gagnee").
 - cible_type / cible_slug : cible_type et cible_slug vont toujours ensemble : soit les DEUX remplis (avec le bon préfixe), soit les DEUX à null. Si tu ne connais pas le slug exact de la cible, mets les deux à null..
 - contenu : une phrase décrivant ce dont le PNJ se souvient.
@@ -27,7 +27,10 @@ Réponds UNIQUEMENT via le format structuré demandé.
  * J'envoie le contexte d'une scène, je récupère une proposition de mémoires.
  * Je renvoie le tableau prêt à passer plus tard à applyMem — ou je lève si rien d'exploitable.
  */
+
+// au lieu de : const client = new Anthropic();  (au niveau module)
 export async function proposerMemoires(contexteScene: string): Promise<MemoireProposee[]> {
+    const client = new Anthropic();   // créé seulement quand on appelle VRAIMENT le LLM
     const reponse = await client.messages.create({
         model: 'claude-haiku-4-5',   // le moins cher, parfait pour de l'extraction
         max_tokens: 1024,
@@ -38,9 +41,10 @@ export async function proposerMemoires(contexteScene: string): Promise<MemoirePr
         messages: [{ role: 'user', content: contexteScene }],
     });
 
-    // DISCIPLINE : je regarde TOUJOURS pourquoi le modèle s'est arrêté, et ce que ça coûte.
+    /* DISCIPLINE : je regarde TOUJOURS pourquoi le modèle s'est arrêté, et ce que ça coûte.
     console.log('stop_reason :', reponse.stop_reason);
     console.log('usage       :', reponse.usage);
+    */
 
     // end_turn = réponse complète. Tout le reste (max_tokens, refusal…) = pas exploitable tel quel.
     if (reponse.stop_reason !== 'end_turn') {
