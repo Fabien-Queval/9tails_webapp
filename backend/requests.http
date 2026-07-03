@@ -396,17 +396,17 @@ Content-Type: application/json
 
 ### 37. Happy path → 200 + propositionMemoires   [⚠️ PAYANT — DÉSACTIVÉ par défaut]
 ### Décommente ce bloc UNIQUEMENT quand tu veux dépenser 1 appel LLM réel.
-# POST http://localhost:3000/api/campagnes/{{campagneId}}/proposer-memoires
-# Authorization: Bearer {{token}}
-# Content-Type: application/json
-#
-# { "contexteScene": "Rosalita, une marchande du marché, a vu le héros la sauver d'une embuscade. Elle lui en est reconnaissante et lui fait désormais confiance. Un garde nommé Chien Bleu observait la scène de loin, méfiant." }
-#
-# > {%
-#     client.test("37 → statut 200", function () {
-#         client.assert(response.status === 200, "statut reçu : " + response.status);
-#     });
-#     client.test("37 → propositionMemoires est un tableau", function () {
-#         client.assert(Array.isArray(response.body.propositionMemoires), "reçu : " + JSON.stringify(response.body));
-#     });
-# %}
+ POST http://localhost:3000/api/campagnes/1/proposer-memoires
+ Authorization: Bearer {{token}}
+ Content-Type: application/json
+
+ { "contexteScene": "Tamamo la déesse renarde parvient difficilement à cacher ses sentiments envers notre héros. Ce qui la pousse à agir étrangement" }
+
+ > {%
+     client.test("37 → statut 200", function () {
+         client.assert(response.status === 200, "statut reçu : " + response.status);
+    });
+     client.test("37 → propositionMemoires est un tableau", function () {
+         client.assert(Array.isArray(response.body.propositionMemoires), "reçu : " + JSON.stringify(response.body));
+     });
+  %}

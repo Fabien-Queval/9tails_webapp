@@ -6,11 +6,12 @@
 
 
 import { insertMemoireDal, Memoire } from '../dal/memoireDAL';
-import { getNpcBySlugDal } from '../dal/npcDAL';
+import {getNpcBySlugDal, getNpcsByCampagneDal, Npc} from '../dal/npcDAL';
 import { MemoireProposee } from '../schema/memoireSchema';
 import {assertProprietaireCampagne} from "./campagneService";
 import {proposerMemoires} from "./llmService";
 import {slugNpc} from "../utils/slug";
+import {getPersonnageByCampagneDal, Personnage} from "../dal/personnageDal";
 
 /**
  * Je construis le slug d'une mémoire à partir de ses morceaux.
@@ -89,7 +90,37 @@ export function applyMem(
 export async function proposerMemoiresPourScene(id_campagne: number, id_utilisateur: number, contexteScene: string): Promise<MemoireProposee[]> {
     assertProprietaireCampagne(id_campagne, id_utilisateur);
 
-    const propositionMemoires = await proposerMemoires(contexteScene);
+    const pc = getPersonnageByCampagneDal(id_campagne);         // Le personnage joueur (ou null)
+    const npcsActifs = getNpcsByCampagneDal(id_campagne, 'ACTIF') // Les NPC actifs (un tableau)
+
+    const roster = serialiserRoster(pc, npcsActifs);
+
+    const propositionMemoires = await proposerMemoires(contexteScene, roster);
+
+
 
     return propositionMemoires;
+}
+
+function relationEnMot(valeur: number): string {
+    if (valeur > 20) return 'allié';
+    if (valeur < -20) return 'hostile';
+    return 'neutre';
+}
+
+function serialiserRoster(pc: Personnage | null, npcsActifs: Npc[]): string {
+    // La ligne du PC — ou un repli si la campagne n'a pas encore de perso.
+    const lignePc = pc
+        ? `PERSONNAGE JOUEUR : ${pc.nom} (slug: ${pc.slug_pc})`
+        : `PERSONNAGE JOUEUR : (aucun pour l'instant)`;
+
+    // Une ligne par NPC actif.
+    const lignesNpc = npcsActifs
+        .map(npc =>
+            `- ${npc.nom} (slug: ${npc.slug}) — ${npc.description ?? 'sans description'} — relation : ${relationEnMot(npc.relation_pc)}`
+        )
+        .join('\n');
+
+    // On recolle le tout en un bloc.
+    return `${lignePc}\nPNJ ACTIFS :\n${lignesNpc}`;
 }

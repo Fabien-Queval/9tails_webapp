@@ -14,14 +14,18 @@ import {MemoireProposee, SortieLLMSchema} from '../schema/memoireSchema';
 
 // Les règles + le CONTRAT. Le "system" est le paramètre où je cadre le LLM.
 // Point de départ minimal pour le PoC — tu l'enrichiras avec les vraies règles du monde.
-const SYSTEME = `Tu es l'assistant d'un maître de jeu de JDR.
+function construireSysteme(roster: string): string {
+    return `Tu es l'assistant d'un maître de jeu de JDR.
 À partir d'une scène de jeu, tu extrais les MÉMOIRES que les PNJ en gardent.
 Réponds UNIQUEMENT via le format structuré demandé.
-- npc : le prénom du PNJ concerné, NU (ex. "rosalita"), sans nom de famille.
+- npc : le nom du PNJ concerné, EXACTEMENT tel qu'il apparaît dans la liste ci-dessous (sans le préfixe).
 - nature : un tag court en minuscules_avec_underscores (ex. "confiance_gagnee").
-- cible_type / cible_slug : cible_type et cible_slug vont toujours ensemble : soit les DEUX remplis (avec le bon préfixe), soit les DEUX à null. Si tu ne connais pas le slug exact de la cible, mets les deux à null..
+- cible_type / cible_slug : toujours ensemble (les DEUX remplis avec le bon préfixe, ou les DEUX à null). Si tu ne connais pas le slug exact, mets les deux à null.
 - contenu : une phrase décrivant ce dont le PNJ se souvient.
-- considère que le PC a pour slug pc_fabien`;
+
+Voici les personnages RÉELS de cette campagne — utilise leurs vrais noms et slugs, n'en invente pas :
+${roster}`;
+}
 
 /**
  * J'envoie le contexte d'une scène, je récupère une proposition de mémoires.
@@ -29,13 +33,13 @@ Réponds UNIQUEMENT via le format structuré demandé.
  */
 
 // au lieu de : const client = new Anthropic();  (au niveau module)
-export async function proposerMemoires(contexteScene: string): Promise<MemoireProposee[]> {
+export async function proposerMemoires(contexteScene: string, roster: string): Promise<MemoireProposee[]> {
     const client = new Anthropic();   // créé seulement quand on appelle VRAIMENT le LLM
     const reponse = await client.messages.create({
         model: 'claude-haiku-4-5',   // le moins cher, parfait pour de l'extraction
         max_tokens: 1024,
         // *deprecated* temperature: 0,              // basse = stable (Haiku autorise le réglage)
-        system: SYSTEME,
+        system: construireSysteme(roster),   // ← dynamique : contient le vrai roster
         // ⭐ LA ligne clé : je force la réponse à coller à mon schéma Zod.
         output_config: { format: zodOutputFormat(SortieLLMSchema) },
         messages: [{ role: 'user', content: contexteScene }],
