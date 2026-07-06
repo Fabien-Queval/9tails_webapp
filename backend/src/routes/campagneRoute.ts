@@ -8,13 +8,12 @@ import {
     restaurerCampagne,
     updateCampagne
 } from "../services/campagneService";
-import { createNpc, getNpcsByCampagne } from "../services/npcService";
-import {body, validationResult} from "express-validator";
-import {createPersonnage, getPersonnageByCampagne, updatePersonnage} from "../services/personnageService";
+import {body, param, validationResult} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
-import {validateFiche} from "../middleware/validateFiche";
-import {createArc, getArcsByCampagne, terminerArc} from "../services/arcService";
-import {ArcStatut} from "../dal/arcDAL";
+import {proposerMemoiresPourScene} from "../services/memoireService";
+import personnageRoute from "./personnageRoute";
+import campagneNpcRoute from "./campagneNpcRoute";
+import arcRoute from "./arcRoute";
 
 
 const router = Router();
@@ -63,7 +62,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
 // Ici, on va dire que l'emplacement n'a pas une valeur fixe
 // ROUTE de getCampagne()
-router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware,
+    [param('id').isInt()],
+    handleValidationErrors,
+    async (req: Request, res: Response) => {
 
     const id = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
@@ -71,6 +73,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
     try {
         res.status(200).json({ campagne: getCampagne(id, id_utilisateur)});
     } catch (error: any) {
+        // console.error('Échec LLM (proposer-memoires) :', error);   // ← temporaire, pour voir la vraie cause
         if (error.message === 'Accès interdit') {
             return res.status(403).json({message: error.message});
         }
@@ -172,200 +175,38 @@ router.delete('/:id', authMiddleware, (req: Request, res: Response) => {
     }
 });
 
-// ----------------------------------------------- Routes de PERSONNAGE -----------------------------------------------
+// ----------------------------------------------- Routes de MEMOIREPROPOSEE -----------------------------------------------
+// Reste ici (et pas dans un fichier enfant) : c'est une action au niveau de la
+// campagne elle-même, pas une sous-ressource avec son propre cycle de vie.
 
-router.post('/:id/personnage', authMiddleware,
+router.post('/:id/proposer-memoires', authMiddleware,
     [
-        // Validation FORMAT (express-validator) — champs plats uniquement
-        body('slug_pc').matches(/^pc_[a-z0-9]+(_[a-z0-9]+)*$/),
-        body('nom').isLength({ min: 2, max: 100 }),
-        body('description').isLength({ min: 1, max: 2000 }), // NOT NULL → requis (≠ NPC où c'était optionnel)
-        // fiche_json : PAS ici — Zod s'en occupe plus bas
-    ], handleValidationErrors, validateFiche,
-    (req: Request, res: Response) => {
-    
-
-    // On rassemble les entrées depuis les 3 sources
-        const id_campagne           = Number(req.params.id);            // URL
-        const id_utilisateur        = req.user!.id_utilisateur;         // jeton
-        const { slug_pc, nom, description } = req.body;                         // corps
-        const fiche_json             = JSON.stringify(req.ficheValidee); // fiche validée par le middleware → chaîne TEXT
-
-    // Et finalement, on appelle le service, et on attrape les erreurs pour les traduire en codes HTTP
-        try {
-            const personnage = createPersonnage(
-                id_utilisateur, id_campagne, slug_pc, nom, description, fiche_json
-            );
-            res.status(201).json({ personnage }); // 201 = créé
-        } catch (error: any) {
-            if (error.message === 'Accès interdit')
-                return res.status(403).json({ message: error.message });
-            if (error.message === 'Campagne introuvable')
-                return res.status(404).json({ message: error.message });
-            if (error.message === 'Un personnage existe déjà pour cette campagne')
-                return res.status(409).json({ message: error.message });
-            return res.status(400).json({ message: error.message });
-        }
-});
-
-router.get('/:id/personnage', authMiddleware, (req: Request, res: Response) => {
-    const id_campagne    = Number(req.params.id);   // URL
-    const id_utilisateur = req.user!.id_utilisateur; // jeton
-
-    try {
-        const personnage = getPersonnageByCampagne(id_campagne, id_utilisateur);
-
-        // Le service peut renvoyer null : campagne à toi, mais pas (encore) de PC
-        if (!personnage) {
-            return res.status(404).json({ message: 'Personnage introuvable' });
-        }
-
-        res.status(200).json({ personnage });
-    } catch (error: any) {
-        if (error.message === 'Accès interdit')
-            return res.status(403).json({ message: error.message });
-        if (error.message === 'Campagne introuvable')
-            return res.status(404).json({ message: error.message });
-        return res.status(500).json({ message: error.message });
-    }
-});
-
-router.patch('/:id/personnage', authMiddleware,
-    [
-        body('description').isLength({ min: 1, max: 2000 }),
-    ], handleValidationErrors, validateFiche,
-    (req: Request, res: Response) => {
-
-    const id_campagne    = Number(req.params.id);               // URL
-    const id_utilisateur = req.user!.id_utilisateur;            // jeton
-    const description       = req.body.description;                             // corps
-    const fiche_json       = JSON.stringify(req.ficheValidee);  // fiche validée par le middleware → chaîne TEXT
-
-    try {
-        const personnageUpdated = updatePersonnage(id_utilisateur, id_campagne, description, fiche_json);
-
-        res.status(200).json({personnageUpdated});
-    } catch (error: any) {
-        if (error.message === 'Accès interdit') {
-            return res.status(403).json({ message: error.message });
-        }
-        if (error.message === 'Campagne introuvable') {
-            return res.status(404).json({ message: error.message });
-        }
-        if (error.message === 'Personnage introuvable') {
-            return res.status(404).json({ message: error.message });
-        }
-        return res.status(400).json({ message: error.message });
-    }
-});
-
-// --- Sous-ressource NPC, imbriquée sous la campagne ---
-
-router.post('/:id/npcs', authMiddleware,
-    [
-        body('id_organisation').optional().isInt(), // si absent, ne râle pas ; s'il est là, qu'il soit un entier
-        body('slug').matches(/^npc_[a-z0-9]+(_[a-z0-9]+)*$/),
-        body('nom').isLength({ min: 2, max: 100 }),
-        body('description').optional().isLength({ max: 2000 }),
-        body('fiche_json').notEmpty()
+    body('contexteScene').isString().isLength({ min: 1, max: 10000}),
     ],
-    (req: Request, res: Response) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
-        const id_campagne = Number(req.params.id);
-        const id_utilisateur = req.user!.id_utilisateur;
-        const { id_organisation, slug, nom, description, fiche_json } = req.body;
-
-        // fiche_json est stocké en TEXT en base : si le client envoie un objet JSON,
-        // on le sérialise en string avant de le transmettre au service.
-        const ficheJsonString = typeof fiche_json === 'string' ? fiche_json : JSON.stringify(fiche_json);
-
-        try {
-            const npc = createNpc(id_utilisateur, id_campagne, id_organisation, slug, nom, description ?? null, ficheJsonString);
-            res.status(201).json({ npc });
-        } catch (error: any) {
-            if (error.message === 'Accès interdit') {
-                return res.status(403).json({ message: error.message });
-            }
-            if (error.message === 'Campagne introuvable') {
-                return res.status(404).json({ message: error.message });
-            }
-            return res.status(400).json({ message: error.message });
-        }
-    });
-
-router.get('/:id/npcs', authMiddleware, (req: Request, res: Response) => {
-    const id_campagne = Number(req.params.id);
-    const id_utilisateur = req.user!.id_utilisateur;
-
-    try {
-        const npcs = getNpcsByCampagne(id_campagne, id_utilisateur);
-        res.status(200).json({ npcs });
-    } catch (error: any) {
-        if (error.message === 'Accès interdit') {
-            return res.status(403).json({ message: error.message });
-        }
-        if (error.message === 'Campagne introuvable') {
-            return res.status(404).json({ message: error.message });
-        }
-        return res.status(500).json({ message: error.message });
-    }
-});
-
-// ----------------------------------------------- Routes de ARC -----------------------------------------------
-
-router.post('/:id/arcs', authMiddleware,
-    [
-        body('titre').isLength({ min: 3, max: 100 }),
-        body('resume').isLength({ min: 1, max: 2000 }),   // le "Ton:.. Objectif:.. Contexte:.." → requis
-    ], handleValidationErrors,
-    (req: Request, res: Response) => {
-        const id_campagne    = Number(req.params.id);
-        const id_utilisateur = req.user!.id_utilisateur;
-        const { titre, resume } = req.body;
-
-        try {
-            const arc = createArc(id_utilisateur, id_campagne, titre, resume);
-            res.status(201).json({ arc });
-        } catch (error: any) {
-            if (error.message === 'Accès interdit')      return res.status(403).json({ message: error.message });
-            if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
-            return res.status(400).json({ message: error.message });
-        }
-    });
-
-router.get('/:id/arcs', authMiddleware, (req: Request, res: Response) => {
+    handleValidationErrors, async (req: Request, res: Response)=> {
+    const { contexteScene } = req.body;
     const id_campagne    = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
-    const statut         = req.query.statut as ArcStatut | undefined;   // <-- query, pas body
 
     try {
-        const arcs = getArcsByCampagne(id_campagne, id_utilisateur, statut);
-        res.status(200).json({ arcs });
-    } catch (error: any) {
-        if (error.message === 'Accès interdit')      return res.status(403).json({ message: error.message });
-        if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
-        return res.status(500).json({ message: error.message });
-    }
-});
-
-router.patch('/:id/arcs/:id_arc/terminer', authMiddleware, (req: Request, res: Response) => {
-    const id_campagne    = Number(req.params.id);       // 1er param
-    const id_arc         = Number(req.params.id_arc);   // 2e param  <-- nouveauté
-    const id_utilisateur = req.user!.id_utilisateur;
-
-    try {
-        const arc = terminerArc(id_utilisateur, id_campagne, id_arc);
-        res.status(200).json({ arc });
+        const propositionMemoires = await proposerMemoiresPourScene(id_campagne, id_utilisateur, contexteScene);
+        res.status(200).json({ propositionMemoires });
     } catch (error: any) {
         if (error.message === 'Accès interdit')                          return res.status(403).json({ message: error.message });
-        if (error.message === 'Arc introuvable')                         return res.status(404).json({ message: error.message });
-        if (error.message === 'Seul un arc en cours peut être clôturé')  return res.status(409).json({ message: error.message });
-        return res.status(400).json({ message: error.message });
+        if (error.message === 'Campagne introuvable')                    return res.status(404).json({ message: error.message });
+
+        return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
     }
-});
+    });
+
+// ----------------------------------------------- Montage des sous-ressources -----------------------------------------------
+// Chaque sous-ressource de la campagne vit dans son propre fichier de routes.
+// Le début du chemin (avec le :id de la campagne) est déclaré ICI, une seule fois ;
+// le fichier enfant ne connaît que la suite du chemin, et récupère le :id
+// grâce à son option { mergeParams: true }.
+
+router.use('/:id/personnage', personnageRoute);   // POST / GET / PATCH  /api/campagnes/:id/personnage
+router.use('/:id/npcs', campagneNpcRoute);        // POST / GET          /api/campagnes/:id/npcs
+router.use('/:id/arcs', arcRoute);                // arcs + terminer + checkpoints
 
 export default router;

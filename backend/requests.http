@@ -184,3 +184,239 @@ Authorization: Bearer {{token}}
 ### 24. Relire NPC #1 après suppression → attendu 404 (confirme la cascade/suppression)
 GET http://localhost:3000/api/npcs/{{npcId}}
 Authorization: Bearer {{token}}
+
+### ====================  CHECKPOINT  ====================
+### (Pré-requis : avoir lancé 0bis/login, 1 (campagne) et 8 (Arc #2) pour capturer token/campagneId/arcId2)
+
+### 25. Créer Checkpoint #1 sur Arc #2 → attendu 201
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "La salle noyée", "contenu": "Le groupe pousse une porte et découvre une salle envahie par l'eau noire.", "resume": "Découverte de la salle noyée ; la tension monte." }
+
+> {%
+    client.test("25 → statut 201", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.global.set("checkpointId", response.body.checkpoint.id_checkpoint);
+    client.global.set("ordrePrec", response.body.checkpoint.ordre);   // on retient l'ordre pour le test 27
+%}
+
+### 26. Créer Arc #3 (frais, EN_COURS) → capture son id, pour prouver le scope CAMPAGNE
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "Le Gouffre", "resume": "Ton : Tendu, Objectif : Survivre, Contexte : Un gouffre sans fond." }
+
+> {%
+    client.test("26 → statut 201", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.global.set("arcId3", response.body.arc.id_arc);
+%}
+
+### 27. Créer Checkpoint #2 sur Arc #3 → 201 ET ordre = ordrePrec + 1 (compteur scopé CAMPAGNE, pas arc)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId3}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "Le pont de corde", "contenu": "Un pont de corde à moitié rompu enjambe le gouffre.", "resume": "Franchissement périlleux du pont." }
+
+> {%
+    client.test("27 → statut 201", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.test("27 → ordre continue (+1) sur un AUTRE arc = scope campagne", function () {
+        const attendu = client.global.get("ordrePrec") + 1;
+        client.assert(response.body.checkpoint.ordre === attendu,
+            "ordre attendu " + attendu + ", reçu " + response.body.checkpoint.ordre);
+    });
+%}
+
+### 28. Checkpoint SANS resume → attendu 400 (resume requis : validator min:1)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "Sans résumé", "contenu": "Du contenu, mais pas de résumé." }
+
+> {%
+    client.test("28 → statut 400 (resume requis)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 29. Checkpoint avec titre trop court ("ab") → attendu 400 (validation)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "ab", "contenu": "x", "resume": "y" }
+
+> {%
+    client.test("29 → statut 400 (titre trop court)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 30. Checkpoint sur un arc inexistant (999999) → attendu 404 (garde IDOR)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/999999/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titre": "Arc fantôme", "contenu": "Ne devrait pas passer.", "resume": "néant" }
+
+> {%
+    client.test("30 → statut 404 (garde IDOR)", function () {
+        client.assert(response.status === 404, "statut reçu : " + response.status);
+    });
+%}
+
+### 31. Checkpoint + 2 mémoires, npc en NOM "Chien Bleu" → slugNpc résout → 201 (PREUVE du branchement slugNpc)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "La rencontre au marché",
+  "contenu": "Le groupe croise Chien Bleu entre deux étals ; méfiance et curiosité se mêlent.",
+  "resume": "Première vraie rencontre avec Chien Bleu.",
+  "memoires": [
+    { "npc": "Chien Bleu", "nature": "inconnu", "cible_type": "PC", "cible_slug": "pc_fabien", "contenu": "Un roturier qui traîne trop près. À surveiller." },
+    { "npc": "Chien Bleu", "nature": "amusant", "cible_type": "PC", "cible_slug": "pc_fabien", "contenu": "Contre toute attente, il la fait rire." }
+  ]
+}
+
+> {%
+    client.test("31 → statut 201", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.test("31 → 2 mémoires créées", function () {
+        client.assert(response.body.memoires.length === 2, "nb mémoires : " + response.body.memoires.length);
+    });
+    client.test("31 → slug conforme au CHECK", function () {
+        const slug = response.body.memoires[0].slug_memoire;
+        client.assert(/^mem_npc_chien_bleu_x_pc_fabien_inconnu_cp\d{3}$/.test(slug), "slug reçu : " + slug);
+    });
+%}
+
+### 32. Rejouer la MÊME mémoire sur un NOUVEAU checkpoint → 201 (cpNNN scopé campagne = pas de collision UNIQUE)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "Retrouvailles au marché",
+  "contenu": "Chien Bleu recroise le groupe ; la méfiance n'a pas fondu.",
+  "resume": "Deuxième passage, même méfiance.",
+  "memoires": [
+    { "npc": "Chien Bleu", "nature": "inconnu", "cible_type": "PC", "cible_slug": "pc_fabien", "contenu": "Toujours ce roturier collant." }
+  ]
+}
+
+> {%
+    client.test("32 → statut 201 (aucune collision UNIQUE)", function () {
+        client.assert(response.status === 201, "statut reçu : " + response.status);
+    });
+    client.test("32 → 1 mémoire créée", function () {
+        client.assert(response.body.memoires.length === 1, "nb : " + response.body.memoires.length);
+    });
+%}
+
+### 33. Mémoire sur un NPC inexistant (npc_fantome) → 404 (garde IDOR dans applyMem, transaction annulée)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "Le fantôme",
+  "contenu": "On tente d'attacher une mémoire à un NPC qui n'existe pas.",
+  "resume": "Ne devrait rien créer.",
+  "memoires": [
+    { "npc": "Fantome", "nature": "inconnu", "cible_type": null, "cible_slug": null, "contenu": "Mémoire orpheline." }
+  ]
+}
+
+> {%
+    client.test("33 → statut 404 (NPC introuvable)", function () {
+        client.assert(response.status === 404, "statut reçu : " + response.status);
+    });
+%}
+
+### 34. Cible à moitié remplie (type sans slug) → 400 (refine tout-ou-rien, frontière HTTP)
+POST http://localhost:3000/api/campagnes/{{campagneId}}/arcs/{{arcId2}}/checkpoints
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "titre": "Cible bancale",
+  "contenu": "Une cible avec le type mais pas le slug.",
+  "resume": "Doit être rejetée avant la base.",
+  "memoires": [
+    { "npc": "npc_chien_bleu", "nature": "inconnu", "cible_type": "PC", "cible_slug": null, "contenu": "Cible incohérente." }
+  ]
+}
+
+> {%
+    client.test("34 → statut 400 (cible tout-ou-rien)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### ============ PROPOSITION DE MÉMOIRES (LLM) ============
+### Rappel : lance d'abord 0bis (login) et 1 (créer campagne) si {{token}} / {{campagneId}} ne sont plus valides.
+
+### 35. contexteScene VIDE → 400 (validator, AUCUN appel LLM)   [GRATUIT]
+POST http://localhost:3000/api/campagnes/{{campagneId}}/proposer-memoires
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "contexteScene": "" }
+
+> {%
+    client.test("35 → statut 400 (validator)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 36. Campagne inexistante (id 999999) → la garde IDOR lève AVANT le LLM   [GRATUIT]
+POST http://localhost:3000/api/campagnes/999999/proposer-memoires
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "contexteScene": "Une scène quelconque, mais la campagne n'existe pas." }
+
+> {%
+    client.test("36 → la garde lève (404/403), pas d'appel LLM", function () {
+        client.assert(response.status === 404 || response.status === 403, "statut reçu : " + response.status);
+    });
+%}
+
+### 37. Happy path → 200 + propositionMemoires   [⚠️ PAYANT — DÉSACTIVÉ par défaut]
+### Décommente ce bloc UNIQUEMENT quand tu veux dépenser 1 appel LLM réel.
+POST http://localhost:3000/api/campagnes/1/proposer-memoires
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "contexteScene": "Tamamo la déesse renarde parvient difficilement à cacher ses sentiments envers notre héros. Ce qui la pousse à agir étrangement" }
+
+> {%
+     client.test("37 → statut 200", function () {
+         client.assert(response.status === 200, "statut reçu : " + response.status);
+    });
+     client.test("37 → propositionMemoires est un tableau", function () {
+         client.assert(Array.isArray(response.body.propositionMemoires), "reçu : " + JSON.stringify(response.body));
+     });
+%}
+
+### 38. Param id non-entier → attendu 400 (garde param('id').isInt())
+GET http://localhost:3000/api/campagnes/abc
+Authorization: Bearer {{token}}
+
+> {%
+    client.test("id non-entier rejete en 400", function() {
+        client.assert(response.status === 400, "Attendu 400, recu " + response.status);
+    });
+%}

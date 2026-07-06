@@ -11,11 +11,13 @@ export interface Npc {
     slug: string;
     nom: string;
     description: string |null;
-    fiche_json: string |null;
+    fiche_json: string;
     statut: NpcStatut;
     relation_pc: number;
     date_creation: string;
 }
+
+
 
 // CRUD : NPC !
 
@@ -62,6 +64,27 @@ export function getNpcByIdDal(id_npc: number):Npc | null {
 `);
 
     const npc = stmt.get(id_npc) as Npc | undefined;
+
+    return npc ?? null;
+}
+
+export function getNpcBySlugDal(id_campagne: number, slug: string):Npc | null {
+    const stmt = db.prepare(`
+    SELECT  id_npc,
+            id_campagne,
+            id_organisation,
+            slug,
+            nom,
+            description,
+            fiche_json,
+            statut,
+            relation_pc,
+            date_creation
+    FROM NPC
+    WHERE id_campagne = ? AND slug = ?
+    `);
+
+    const npc = stmt.get(id_campagne, slug) as Npc | undefined;
 
     return npc ?? null;
 }
@@ -122,4 +145,5 @@ export function deleteNpcDal(id_npc: number):boolean {
     }
     return true
 }
+
 

@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS CHECKPOINT (
   id_arc        INTEGER NOT NULL REFERENCES ARC(id_arc) ON DELETE CASCADE,
   titre         TEXT    NOT NULL,
   contenu       TEXT    NOT NULL,
-  resume        TEXT,
+  resume        TEXT    NOT NULL,
   ordre         INTEGER NOT NULL,
   date_creation TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
   CONSTRAINT UK_CHECKPOINT_ARC_ORDRE   UNIQUE (id_arc, ordre),
