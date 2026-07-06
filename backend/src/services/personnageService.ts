@@ -56,7 +56,7 @@ export function updatePersonnage(id_utilisateur: number, id_campagne: number, de
 
     const personnage = getPersonnageByCampagneDal(id_campagne);
     if (!personnage) {
-        throw new Error('Personnage introuvable !'); // -> 404
+        throw new Error('Personnage introuvable'); // -> 404
     }
     return updatePersonnageDal(personnage.id_personnage, description, fiche_json);
 }

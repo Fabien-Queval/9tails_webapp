@@ -11,11 +11,13 @@ export interface Npc {
     slug: string;
     nom: string;
     description: string |null;
-    fiche_json: string |null;
+    fiche_json: string;
     statut: NpcStatut;
     relation_pc: number;
     date_creation: string;
 }
+
+
 
 // CRUD : NPC !
 
