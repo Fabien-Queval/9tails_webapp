@@ -1,0 +1,9 @@
+<!-- /inscription -->
+
+<form [formGroup]="formulaire" (ngSubmit)="onSubmit()">
+  <input type="email" formControlName="email" placeholder="Email"/>
+  <input type="text" formControlName="pseudo" placeholder="Pseudonyme"/>
+  <input type="password" formControlName="password" placeholder="Password"/>
+
+  <button type="submit" [disabled]="formulaire.invalid">S'enregistrer</button>
+</form>
