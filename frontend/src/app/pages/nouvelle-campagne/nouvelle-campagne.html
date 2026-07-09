@@ -1,0 +1,63 @@
+<div class="flex gap-2">
+  <div class="flex-1 bg-accent text-ink text-center py-3">① SETTING</div>
+  <div class="flex-1 bg-accent-dim text-center py-3">② PERSONNAGE</div>
+  <div class="flex-1 bg-accent-dark text-muted text-center py-3">③ ARC</div>
+</div>
+
+
+<div class="bg-surface rounded-lg p-6">
+  <form [formGroup]="formulaire" class="flex gap-4">
+
+    <div class="flex-1 flex flex-col gap-4">
+
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Nom de la campagne</label>
+        <input type="text" formControlName="titre"
+               class="bg-raised text-ink rounded-md px-3 py-2" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Genre / Univers</label>
+        <input type="text" formControlName="genre"
+               class="bg-raised text-ink rounded-md px-3 py-2" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Description courte</label>
+        <textarea formControlName="description"
+               class="bg-raised text-ink rounded-md px-3 py-2"></textarea>
+      </div>
+
+    </div>
+
+    <div class="flex-1 flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Maturité</label>
+        <select formControlName="maturite" class="bg-raised text-ink rounded-md px-3 py-2">
+          <option value="" disabled>Choisis un âge…</option>
+          <option value="12">12 ans</option>
+          <option value="16">16 ans</option>
+          <option value="18">18 ans</option>
+        </select>
+      </div>
+
+      <div class="bg-raised rounded-md flex-1 flex items-center justify-center text-muted font-body min-h-48">
+        Illustration (à venir)
+      </div>
+
+    </div>
+
+  </form>
+
+  <div class="flex justify-end gap-3 mt-6">
+    <a routerLink="/tableau-de-bord"
+       class="border border-muted text-muted hover:text-ink hover:border-ink font-body px-4 py-2 rounded-md transition-colors">
+      Annuler
+    </a>
+    <button
+      class="bg-accent hover:bg-accent-dim text-ink font-body px-4 py-2 rounded-md transition-colors">
+      Suivant
+    </button>
+  </div>
+
+</div>

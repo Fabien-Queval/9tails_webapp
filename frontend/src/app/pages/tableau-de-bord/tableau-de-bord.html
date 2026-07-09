@@ -1,1 +1,90 @@
-<p>tableau-de-bord works!</p>
+<!-- Zone de contenu du tableau de bord.
+     Le bandeau du haut (WEBAPP 9TAILS + "Joueur") viendra du futur composant Header,
+     dans app.html — je ne le mets pas ici, c'est un autre chantier. -->
+<section class="p-8">
+
+  <!-- En-tête de page : titre à gauche, bouton de création à droite.
+       je pose un flex + justify-between pour pousser les deux aux extrémités. -->
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="font-heading text-3xl text-ink">Mes campagnes</h1>
+
+    <!-- Bouton "+ Nouvelle campagne" : décoratif pour l'instant.
+         Il mènera à l'assistant de création (le wizard 3 étapes). Action à brancher. -->
+      <a class="bg-accent hover:bg-accent-dim text-ink font-body px-4 py-2 rounded-md transition-colors" routerLink="/campagnes/nouvelle">
+        + Nouvelle campagne
+      </a>
+  </div>
+
+  <!-- Onglets de filtre, en visuel pour coller à la maquette.
+       ⚠️ Le FILTRAGE réel par statut (n'afficher que les Actives, etc.) est une logique
+       à brancher ensuite : sans doute un signal "onglet choisi" + un computed qui filtre
+       la liste. Pour l'instant, les trois onglets sont juste dessinés. -->
+  <div class="flex gap-6 mb-8 font-heading text-lg">
+    <span class="text-accent border-b-2 border-accent pb-1 cursor-pointer">Actives</span>
+    <span class="text-muted hover:text-ink cursor-pointer">Archivées</span>
+    <span class="text-muted hover:text-ink cursor-pointer">Brouillons</span>
+  </div>
+
+  <!-- La grille de cartes : 1 colonne sur petit écran, 2 dès qu'il y a de la place.
+       je découvre ici la grille Tailwind (grid + grid-cols-*) — même idée que mes lignes
+       de tableau, mais en cases côte à côte au lieu d'empilées. -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Ma boucle @for, déjà connue : une carte <article> par campagne. -->
+    @for (campagne of campagnes(); track campagne.id_campagne) {
+      <article class="bg-surface rounded-lg p-5 flex flex-col gap-4">
+
+        <!-- Haut de la carte : le titre + le badge de statut. -->
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-heading text-xl text-ink">{{ campagne.titre }}</h2>
+
+          <!-- @if / @else : PREMIÈRE FOIS que je m'en sers. C'est le cousin de @for —
+               un bloc de template qui ne s'affiche QUE si la condition est vraie.
+               je colore le badge en vert (accent) quand la campagne est ACTIVE,
+               en gris (raised/muted) sinon. shrink-0 empêche le badge de se comprimer. -->
+          @if (campagne.statut === 'ACTIVE') {
+            <span class="bg-accent text-ink text-xs font-body px-2 py-1 rounded shrink-0">
+              {{ campagne.statut }}
+            </span>
+          } @else {
+            <span class="bg-raised text-muted text-xs font-body px-2 py-1 rounded shrink-0">
+              {{ campagne.statut }}
+            </span>
+          }
+        </div>
+
+        <!-- Aperçu. La maquette prévoit "la dernière entrée du journal", mais cette donnée
+             n'arrive pas encore de l'API (elle ne renvoie que les champs de la campagne).
+             je mets donc la description en attendant — le vrai aperçu se branchera plus tard.
+             line-clamp-2 coupe proprement le texte à 2 lignes ; le || donne un texte de
+             repli quand la description est vide (null). -->
+        <p class="bg-raised rounded-md p-3 text-muted font-body text-sm line-clamp-2 min-h-16">
+          {{ campagne.description || 'Pas encore de description…' }}
+        </p>
+
+        <!-- Actions de la carte, décoratives pour l'instant :
+             Reprendre → mènera à l'écran de jeu ; Archiver → appellera la route archiver. -->
+        <div class="flex gap-3">
+          <button
+            class="flex-1 border border-accent text-accent hover:bg-accent hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
+            Reprendre
+          </button>
+          <button
+            class="flex-1 border border-muted text-muted hover:border-ink hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
+            Archiver
+          </button>
+        </div>
+      </article>
+    }
+  </div>
+
+  <!-- État vide : @if sur la taille de la liste. Si aucune campagne (au boot, ou compte
+       neuf), je montre un message plutôt qu'une grille vide. campagnes() rend le tableau,
+       .length en donne la longueur. -->
+  @if (campagnes().length === 0) {
+    <p class="text-muted font-body text-center mt-10">
+      Aucune campagne pour l'instant. Crée ta première aventure !
+    </p>
+  }
+
+</section>
