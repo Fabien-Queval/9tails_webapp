@@ -28,10 +28,21 @@ export class CampagneService {
   creerCampagne(titre: string,
                 genre: string,
                 description: string,
-                maturite: number): Observable<{ campagne: Campagne[] }> {
-    return this.http.post<{ campagne: Campagne[] }>(
+                maturite: number): Observable<{ campagne: Campagne }> {
+    return this.http.post<{ campagne: Campagne }>(
       'http://localhost:3000/api/campagnes',
       { titre, genre, description, maturite}
     )
+  }
+
+  // J'active une campagne (BROUILLON -> ACTIVE). Le PATCH exige un corps, alors je passe {} vide.
+  // Je type en "unknown" car je ne me sers PAS de la réponse : je rechargerai la liste après coup.
+  activerCampagne(idCampagne: number): Observable<unknown> {
+    return this.http.patch(`http://localhost:3000/api/campagnes/${idCampagne}/activer`, {});
+  }
+
+  // J'archive une campagne active (ACTIVE -> ARCHIVEE). Même principe exactement que l'activation.
+  archiverCampagne(idCampagne: number): Observable<unknown> {
+    return this.http.patch(`http://localhost:3000/api/campagnes/${idCampagne}/archiver`, {});
   }
 }

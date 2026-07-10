@@ -1,3 +1,15 @@
-<h1 class="font-heading text-2xl text-accent">{{ title() }}</h1>
+<!-- En-tête global : ma bannière 9TS, affichée UNIQUEMENT quand je suis connecté
+     (les écrans de connexion/inscription restent nus). Le bouton de déconnexion
+     est posé par-dessus, en haut à droite (position absolute dans un parent relative). -->
+@if (auth.isLoggedIn()) {
+  <header class="relative">
+    <img src="/9ts-header.webp" alt="9TStory — Le héros, c'est vous" class="w-full block" />
+
+    <button (click)="deconnexion()"
+      class="absolute top-4 right-4 bg-deep/70 hover:bg-deep text-ink font-body px-4 py-2 rounded-md transition-colors">
+      Se déconnecter
+    </button>
+  </header>
+}
 
 <router-outlet />

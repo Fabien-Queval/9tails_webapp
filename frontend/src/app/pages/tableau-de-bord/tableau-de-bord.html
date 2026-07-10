@@ -15,15 +15,26 @@
       </a>
   </div>
 
-  <!-- Onglets de filtre, en visuel pour coller à la maquette.
-       ⚠️ Le FILTRAGE réel par statut (n'afficher que les Actives, etc.) est une logique
-       à brancher ensuite : sans doute un signal "onglet choisi" + un computed qui filtre
-       la liste. Pour l'instant, les trois onglets sont juste dessinés. -->
-  <div class="flex gap-6 mb-8 font-heading text-lg">
-    <span class="text-accent border-b-2 border-accent pb-1 cursor-pointer">Actives</span>
-    <span class="text-muted hover:text-ink cursor-pointer">Archivées</span>
-    <span class="text-muted hover:text-ink cursor-pointer">Brouillons</span>
-  </div>
+  <!-- Onglets de filtre, en visuel pour coller à la maquette.-->
+ <div class="flex gap-6 mb-8 font-heading text-lg">
+    <button (click)="onglet.set('ACTIVE')" class="pb-1 cursor-pointer transition-colors"
+      [class.text-accent]="onglet() === 'ACTIVE'" [class.border-b-2]="onglet() === 'ACTIVE'"
+      [class.border-accent]="onglet() === 'ACTIVE'" [class.text-muted]="onglet() !== 'ACTIVE'">
+      Actives
+    </button>
+
+    <button (click)="onglet.set('ARCHIVEE')" class="pb-1 cursor-pointer transition-colors"
+      [class.text-accent]="onglet() === 'ARCHIVEE'" [class.border-b-2]="onglet() === 'ARCHIVEE'"
+      [class.border-accent]="onglet() === 'ARCHIVEE'" [class.text-muted]="onglet() !== 'ARCHIVEE'">
+      Archivées
+    </button>
+
+    <button (click)="onglet.set('BROUILLON')" class="pb-1 cursor-pointer transition-colors"
+      [class.text-accent]="onglet() === 'BROUILLON'" [class.border-b-2]="onglet() === 'BROUILLON'"
+      [class.border-accent]="onglet() === 'BROUILLON'" [class.text-muted]="onglet() !== 'BROUILLON'">
+      Brouillons
+    </button>
+ </div>
 
   <!-- La grille de cartes : 1 colonne sur petit écran, 2 dès qu'il y a de la place.
        je découvre ici la grille Tailwind (grid + grid-cols-*) — même idée que mes lignes
@@ -31,7 +42,7 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
     <!-- Ma boucle @for, déjà connue : une carte <article> par campagne. -->
-    @for (campagne of campagnes(); track campagne.id_campagne) {
+    @for (campagne of campagnesFiltrees(); track campagne.id_campagne) {
       <article class="bg-surface rounded-lg p-5 flex flex-col gap-4">
 
         <!-- Haut de la carte : le titre + le badge de statut. -->
@@ -62,17 +73,30 @@
           {{ campagne.description || 'Pas encore de description…' }}
         </p>
 
-        <!-- Actions de la carte, décoratives pour l'instant :
-             Reprendre → mènera à l'écran de jeu ; Archiver → appellera la route archiver. -->
+        <!-- Actions de la carte, branchées selon le statut :
+             je n'affiche que l'action qui a du sens pour l'état courant de la campagne. -->
         <div class="flex gap-3">
-          <button
-            class="flex-1 border border-accent text-accent hover:bg-accent hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
-            Reprendre
-          </button>
-          <button
-            class="flex-1 border border-muted text-muted hover:border-ink hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
-            Archiver
-          </button>
+
+          <!-- BROUILLON : la seule action utile, c'est de l'activer pour pouvoir jouer. -->
+          @if (campagne.statut === 'BROUILLON') {
+            <button (click)="activer(campagne.id_campagne)"
+              class="flex-1 border border-accent text-accent hover:bg-accent hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
+              Activer
+            </button>
+          }
+
+          <!-- ACTIVE : je peux reprendre la partie (écran de jeu, à venir) ou l'archiver. -->
+          @if (campagne.statut === 'ACTIVE') {
+            <button
+              class="flex-1 border border-accent text-accent hover:bg-accent hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
+              Reprendre
+            </button>
+            <button (click)="archiver(campagne.id_campagne)"
+              class="flex-1 border border-muted text-muted hover:border-ink hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
+              Archiver
+            </button>
+          }
+
         </div>
       </article>
     }
@@ -81,7 +105,7 @@
   <!-- État vide : @if sur la taille de la liste. Si aucune campagne (au boot, ou compte
        neuf), je montre un message plutôt qu'une grille vide. campagnes() rend le tableau,
        .length en donne la longueur. -->
-  @if (campagnes().length === 0) {
+  @if (campagnesFiltrees().length === 0) {
     <p class="text-muted font-body text-center mt-10">
       Aucune campagne pour l'instant. Crée ta première aventure !
     </p>

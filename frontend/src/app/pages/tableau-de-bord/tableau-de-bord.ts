@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { Campagne, CampagneService } from '../../services/campagne';
 import {RouterLink} from '@angular/router';
 
@@ -14,14 +14,32 @@ export class TableauDeBord implements OnInit {
   private campagneListe = inject(CampagneService);
   campagnes = signal<Campagne[]>([]);
 
+  onglet = signal<'ACTIVE' | 'ARCHIVEE' | 'BROUILLON'>('ACTIVE');
+
+  campagnesFiltrees = computed(() =>
+    this.campagnes().filter(campagne => campagne.statut === this.onglet())
+  );
+
   ngOnInit(): void {
+    this.chargerCampagnes();
+  }
+
+  // Je sors le chargement dans sa propre méthode pour pouvoir le rappeler
+  // après chaque action (activer / archiver) et garder la liste à jour.
+  private chargerCampagnes(): void {
     this.campagneListe.getCampagnes().subscribe({
       next: (reponse) => this.campagnes.set(reponse.campagnes),
     });
   }
 
-  // NOTE (Tamamo) : j'ai retiré d'ici le FormGroup de création que tu avais écrit.
-  // La maquette ne met PAS de formulaire sur le dashboard — la création est un
-  // assistant dédié (Setting → Personnage → Arc). Ton FormGroup n'est pas perdu :
-  // il renaîtra dans l'écran "① Setting" du futur wizard. Je te l'ai remis dans le chat.
+  // Au clic "Activer" : j'appelle le service, puis je recharge la liste DANS le next.
+  // Résultat : la campagne quitte l'onglet Brouillons et rejoint les Actives.
+  activer(id: number): void {
+    this.campagneListe.activerCampagne(id).subscribe(() => this.chargerCampagnes());
+  }
+
+  // Au clic "Archiver" : même geste, la campagne passe de Actives à Archivées.
+  archiver(id: number): void {
+    this.campagneListe.archiverCampagne(id).subscribe(() => this.chargerCampagnes());
+  }
 }
