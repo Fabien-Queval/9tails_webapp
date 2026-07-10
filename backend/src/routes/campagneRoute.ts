@@ -1,6 +1,7 @@
 import {Router, Request, Response} from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
 import {
+    activerCampagne,
     archiverCampagne,
     createCampagne, deleteCampagne,
     getCampagne,
@@ -155,6 +156,29 @@ router.patch('/:id/restaurer', authMiddleware, (req: Request, res: Response) => 
         return res.status(500).json({message: error.message});
     }
 });
+
+// ROUTE de activerCampagne
+router.patch('/:id/activer', authMiddleware, (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        const campagneActivee = activerCampagne(id, id_utilisateur);
+        res.status(200).json({campagneActivee});
+    } catch (error: any) {
+        if (error.message === 'Accès interdit') {
+            return res.status(403).json({message: error.message});
+        }
+        if (error.message === 'Campagne introuvable') {
+            return res.status(404).json({message: error.message});
+        }
+        // Nouvelle erreur : 409 = CONFLIT !
+        if (error.message === 'Seule une campagne en brouillon peut être activée') {
+            return res.status(409).json({message: error.message});
+        }
+        return res.status(500).json({message: error.message});
+    }
+})
 
 // ROUTE de deleteCampagne()
 router.delete('/:id', authMiddleware, (req: Request, res: Response) => {
