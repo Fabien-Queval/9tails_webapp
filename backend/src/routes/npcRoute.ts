@@ -1,11 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { getNpcById, updateNpc, deleteNpc } from '../services/npcService';
-import { body, validationResult } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
 
 const router = Router();
 
-router.get('/:id', authMiddleware, (req: Request, res: Response) => {
+router.get('/:id', authMiddleware,
+    // Je valide l'id d'URL en entier avant le handler : req.params est du texte, je refuse un id non-numérique (NaN) avant qu'il atteigne le service et la base.
+    [param('id').isInt()],
+    (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     const id_npc = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 
@@ -25,6 +33,7 @@ router.get('/:id', authMiddleware, (req: Request, res: Response) => {
 
 router.patch('/:id', authMiddleware,
     [
+        param('id').isInt(),
         body('id_organisation').isInt(),
         body('nom').isLength({ min: 2, max: 100 }),
         body('description').optional().isLength({ max: 2000 }),
@@ -59,7 +68,14 @@ router.patch('/:id', authMiddleware,
         }
     });
 
-router.delete('/:id', authMiddleware, (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware,
+    [param('id').isInt()],
+    (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     const id_npc = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 

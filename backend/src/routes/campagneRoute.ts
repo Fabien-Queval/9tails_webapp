@@ -1,6 +1,7 @@
 import {Router, Request, Response} from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
 import {
+    activerCampagne,
     archiverCampagne,
     createCampagne, deleteCampagne,
     getCampagne,
@@ -63,6 +64,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 // Ici, on va dire que l'emplacement n'a pas une valeur fixe
 // ROUTE de getCampagne()
 router.get('/:id', authMiddleware,
+    // Je valide l'id d'URL en entier avant le handler : req.params est du texte, je refuse un id non-numérique (NaN) avant qu'il atteigne le service et la base.
     [param('id').isInt()],
     handleValidationErrors,
     async (req: Request, res: Response) => {
@@ -85,7 +87,9 @@ router.get('/:id', authMiddleware,
 })
 
 // ROUTE de updateCampagne
-router.patch('/:id', authMiddleware, (req: Request, res: Response) => {
+router.patch('/:id', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 
@@ -110,7 +114,9 @@ router.patch('/:id', authMiddleware, (req: Request, res: Response) => {
 });
 
 // ROUTE de archiverCampagne()
-router.patch('/:id/archiver', authMiddleware, (req: Request, res: Response) => {
+router.patch('/:id/archiver', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 
@@ -133,7 +139,9 @@ router.patch('/:id/archiver', authMiddleware, (req: Request, res: Response) => {
 });
 
 // ROUTE de restaurerCampagne
-router.patch('/:id/restaurer', authMiddleware, (req: Request, res: Response) => {
+router.patch('/:id/restaurer', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 
@@ -156,8 +164,35 @@ router.patch('/:id/restaurer', authMiddleware, (req: Request, res: Response) => 
     }
 });
 
+// ROUTE de activerCampagne
+router.patch('/:id/activer', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        const campagneActivee = activerCampagne(id, id_utilisateur);
+        res.status(200).json({campagneActivee});
+    } catch (error: any) {
+        if (error.message === 'Accès interdit') {
+            return res.status(403).json({message: error.message});
+        }
+        if (error.message === 'Campagne introuvable') {
+            return res.status(404).json({message: error.message});
+        }
+        // Nouvelle erreur : 409 = CONFLIT !
+        if (error.message === 'Seule une campagne en brouillon peut être activée') {
+            return res.status(409).json({message: error.message});
+        }
+        return res.status(500).json({message: error.message});
+    }
+})
+
 // ROUTE de deleteCampagne()
-router.delete('/:id', authMiddleware, (req: Request, res: Response) => {
+router.delete('/:id', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 
@@ -181,6 +216,7 @@ router.delete('/:id', authMiddleware, (req: Request, res: Response) => {
 
 router.post('/:id/proposer-memoires', authMiddleware,
     [
+    param('id').isInt(),
     body('contexteScene').isString().isLength({ min: 1, max: 10000}),
     ],
     handleValidationErrors, async (req: Request, res: Response)=> {

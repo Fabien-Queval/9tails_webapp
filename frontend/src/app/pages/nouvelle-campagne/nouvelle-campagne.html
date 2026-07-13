@@ -1,0 +1,213 @@
+<div class="flex gap-2 mb-4">
+  <div class="flex-1 text-center py-3 rounded-md font-body transition-colors"
+       [class.bg-accent]="etape() === 1"
+       [class.bg-accent-dim]="etape() > 1"
+       [class.bg-raised]="etape() < 1"
+       [class.text-ink]="etape() >= 1"
+       [class.text-muted]="etape() < 1">① SETTING</div>
+
+  <div class="flex-1 text-center py-3 rounded-md font-body transition-colors"
+       [class.bg-accent]="etape() === 2"
+       [class.bg-accent-dim]="etape() > 2"
+       [class.bg-raised]="etape() < 2"
+       [class.text-ink]="etape() >= 2"
+       [class.text-muted]="etape() < 2">② PERSONNAGE</div>
+
+  <div class="flex-1 text-center py-3 rounded-md font-body transition-colors"
+       [class.bg-accent]="etape() === 3"
+       [class.bg-accent-dim]="etape() > 3"
+       [class.bg-raised]="etape() < 3"
+       [class.text-ink]="etape() >= 3"
+       [class.text-muted]="etape() < 3">③ ARC</div>
+</div>
+
+@if (etape() === 1) {
+<div class="bg-surface rounded-lg p-6">
+
+
+  <form [formGroup]="formulaire" class="flex gap-4">
+
+    <div class="flex-1 flex flex-col gap-4">
+
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Nom de la campagne</label>
+        <input type="text" formControlName="titre"
+               class="bg-raised text-ink rounded-md px-3 py-2" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Genre / Univers</label>
+        <input type="text" formControlName="genre"
+               class="bg-raised text-ink rounded-md px-3 py-2" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Description courte</label>
+        <textarea formControlName="description"
+               class="bg-raised text-ink rounded-md px-3 py-2"></textarea>
+      </div>
+
+    </div>
+
+    <div class="flex-1 flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <label class="font-body text-ink">Maturité</label>
+        <select formControlName="maturite" class="bg-raised text-ink rounded-md px-3 py-2">
+          <option value="" disabled>Choisis un âge…</option>
+          <option value="12">12 ans</option>
+          <option value="16">16 ans</option>
+          <option value="18">18 ans</option>
+        </select>
+      </div>
+
+      <div class="bg-raised rounded-md flex-1 flex items-center justify-center text-muted font-body min-h-48">
+        Illustration (à venir)
+      </div>
+
+    </div>
+
+  </form>
+
+  <div class="flex justify-end gap-3 mt-6">
+    <a routerLink="/tableau-de-bord"
+       class="border border-muted text-muted hover:text-ink hover:border-ink font-body px-4 py-2 rounded-md transition-colors">
+      Annuler
+    </a>
+    <button (click)="validerSetting()"
+      class="bg-accent hover:bg-accent-dim text-ink font-body px-4 py-2 rounded-md transition-colors">
+      Suivant
+    </button>
+  </div>
+
+</div>
+}
+
+@if (etape() === 2) {
+  <div class="bg-surface rounded-lg p-6">
+
+    <form [formGroup]="formulairePersonnage" class="flex gap-6">
+
+      <!-- Gauche : identité (on tape) -->
+      <div class="flex-1 flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Nom du personnage</label>
+          <input type="text" formControlName="nom" class="bg-raised text-ink rounded-md px-3 py-2" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Race / Espèce</label>
+          <input type="text" formControlName="race" class="bg-raised text-ink rounded-md px-3 py-2" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Classe / Archétype</label>
+          <input type="text" formControlName="classe" class="bg-raised text-ink rounded-md px-3 py-2" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Description courte</label>
+          <textarea formControlName="description" class="bg-raised text-ink rounded-md px-3 py-2"></textarea>
+        </div>
+      </div>
+
+      <!-- Droite : rang + caractéristiques (on clique) -->
+      <div class="flex-1 flex flex-col gap-4">
+
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Rang d'aventure</label>
+          <div class="flex flex-col gap-1">
+            @for (r of echelleRang; track r.valeur) {
+              <button type="button" (click)="choisirRang(r.valeur)"
+                      class="text-left px-3 py-2 rounded-md font-body transition-colors"
+                      [class.bg-accent]="rang() === r.valeur"
+                      [class.text-ink]="rang() === r.valeur"
+                      [class.bg-raised]="rang() !== r.valeur"
+                      [class.text-muted]="rang() !== r.valeur">
+                {{ r.valeur }} — {{ r.nom }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="bg-raised rounded-md px-3 py-2 text-ink font-body text-center">
+          Points restants : {{ pointsRestants() }}/{{ pointsTotal() }}
+        </div>
+
+        <div class="flex flex-col gap-2">
+          @for (carac of cles; track carac) {
+            <div class="flex items-center justify-between bg-raised rounded-md px-3 py-2">
+              <span class="font-body text-ink uppercase">{{ carac }}</span>
+              <div class="flex items-center gap-3">
+                <button type="button" (click)="decrementer(carac)"
+                        class="bg-surface text-ink w-8 h-8 rounded-md">−</button>
+                <span class="font-body text-ink w-4 text-center">{{ caracs()[carac] }}</span>
+                <button type="button" (click)="incrementer(carac)"
+                        class="bg-accent text-ink w-8 h-8 rounded-md">+</button>
+              </div>
+            </div>
+          }
+        </div>
+
+      </div>
+    </form>
+
+    <div class="flex justify-end gap-3 mt-6">
+      <a routerLink="/tableau-de-bord"
+         class="border border-muted text-muted hover:text-ink hover:border-ink font-body px-4 py-2 rounded-md transition-colors">Annuler</a>
+      <button (click)="suivant()"
+              class="bg-accent hover:bg-accent-dim text-ink font-body px-4 py-2 rounded-md transition-colors">Suivant</button>
+    </div>
+
+  </div>
+}
+
+@if (etape() === 3) {
+  <div class="bg-surface rounded-lg p-6">
+
+    <div class="flex gap-6">
+
+      <div class="flex-1 flex flex-col gap-4">
+
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Objectif</label>
+          <select [value]="objectif()" (change)="objectif.set(lireValeur($event))"
+                  class="bg-raised text-ink rounded-md px-3 py-2">
+            <option value="" disabled>Choisis un objectif…</option>
+            @for (o of objectifs; track o) { <option [value]="o">{{ o }}</option> }
+          </select>
+        </div>
+
+        @if (objectif() === 'AUTRE') {
+          <div class="flex flex-col gap-1">
+            <label class="font-body text-ink">Précise ton objectif</label>
+            <input type="text" [value]="objectifAutre()" (input)="objectifAutre.set(lireValeur($event))"
+                   class="bg-raised text-ink rounded-md px-3 py-2" />
+          </div>
+        }
+
+        <div class="flex flex-col gap-1">
+          <label class="font-body text-ink">Ton</label>
+          <select [value]="ton()" (change)="ton.set(lireValeur($event))"
+                  class="bg-raised text-ink rounded-md px-3 py-2">
+            <option value="" disabled>Choisis un ton…</option>
+            @for (t of tons; track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+        </div>
+
+      </div>
+
+      <div class="flex-1 flex flex-col gap-1">
+        <label class="font-body text-ink">Contexte de départ</label>
+        <textarea [value]="contexte()" (input)="contexte.set(lireValeur($event))"
+                  class="bg-raised text-ink rounded-md px-3 py-2 flex-1 min-h-48"
+                  placeholder="La scène d'ouverture que la MJ va faire vivre…"></textarea>
+      </div>
+
+    </div>
+
+    <div class="flex justify-end gap-3 mt-6">
+      <a routerLink="/tableau-de-bord"
+         class="border border-muted text-muted hover:text-ink hover:border-ink font-body px-4 py-2 rounded-md transition-colors">Annuler</a>
+      <button (click)="creerLaCampagne()"
+              class="bg-accent hover:bg-accent-dim text-ink font-body px-4 py-2 rounded-md transition-colors">Créer la campagne</button>
+    </div>
+
+  </div>
+}

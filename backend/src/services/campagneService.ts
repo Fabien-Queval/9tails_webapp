@@ -95,6 +95,14 @@ export function restaurerCampagne(id_campagne: number, id_utilisateur: number): 
     return updateStatutDal(id_campagne, 'ACTIVE');
 }
 
+export function activerCampagne(id_campagne: number, id_utilisateur: number): Campagne | null {
+    const campagne = assertProprietaireCampagne(id_campagne, id_utilisateur);
+    if (campagne.statut !== 'BROUILLON') {
+        throw new Error('Seule une campagne en brouillon peut être activée')
+    }
+    return updateStatutDal(id_campagne, 'ACTIVE');
+}
+
 export function updateCampagne(id_campagne: number, id_utilisateur: number, titre: string, description: string | null, maturite: number): Campagne | null {
     assertProprietaireCampagne(id_campagne, id_utilisateur);
     return updateCampagneDal(id_campagne , titre , description, maturite);

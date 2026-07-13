@@ -1,0 +1,8 @@
+<!-- /connexion -->
+
+<form [formGroup]="formulaire" (ngSubmit)="onSubmit()">
+  <input type="email" formControlName="email" placeholder="Email" />
+  <input type="password" formControlName="password" placeholder="Password">
+
+  <button type="submit" [disabled]="formulaire.invalid">Se connecter</button>
+</form>
