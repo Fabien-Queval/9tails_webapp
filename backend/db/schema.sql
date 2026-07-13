@@ -202,3 +202,18 @@ CREATE TABLE IF NOT EXISTS MEMOIRE (
   CONSTRAINT CK_MEMOIRE_CIBLE_COMPLETE      CHECK  ((cible_type IS NULL AND cible_slug IS NULL) OR (cible_type IS NOT NULL AND cible_slug IS NOT NULL)),
   CONSTRAINT CK_MEMOIRE_CIBLE_SLUG_FORMAT   CHECK  (cible_slug IS NULL OR cible_slug REGEXP '^(npc|pc|obj|loc|org)_[a-z0-9]+(_[a-z0-9]+)*$')
 );
+
+-- Le fil de la partie : une ligne = une prise de parole (moi le JOUEUR, ou le MJ).
+-- Le LLM est amnesique -> c'est CE fil que je rejoue a chaque tour pour lui rendre le contexte.
+-- Je scope l'ordre sur la campagne (comme l'ARC) pour relire les N derniers messages dans le bon sens.
+CREATE TABLE IF NOT EXISTS MESSAGE (
+  id_message    INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_campagne   INTEGER NOT NULL REFERENCES CAMPAGNE(id_campagne) ON DELETE CASCADE,
+  emetteur      TEXT    NOT NULL,
+  contenu       TEXT    NOT NULL,
+  ordre         INTEGER NOT NULL,
+  date_creation TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  CONSTRAINT UK_MESSAGE_CAMPAGNE_ORDRE   UNIQUE (id_campagne, ordre),
+  CONSTRAINT CK_MESSAGE_EMETTEUR         CHECK  (emetteur IN ('JOUEUR', 'MJ')),
+  CONSTRAINT CK_MESSAGE_ORDRE_POSITIF    CHECK  (ordre > 0)
+);

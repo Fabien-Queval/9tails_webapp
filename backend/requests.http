@@ -420,3 +420,80 @@ Authorization: Bearer {{token}}
         client.assert(response.status === 400, "Attendu 400, recu " + response.status);
     });
 %}
+
+### ============ NARRATION — JOUER UN TOUR (LLM) ============
+### Pré-requis : 0bis (login) + 1 (campagne). Pour un roster riche : 2 (PC Kael) + 16/21 (NPC).
+### 39 à 42 = GRATUITS (aucun appel LLM). 43 = PAYANT (lance-le SEUL, pas en Run-all).
+
+### 39. actionJoueur VIDE → 400 (validator, AUCUN appel LLM)   [GRATUIT]
+POST http://localhost:3000/api/campagnes/{{campagneId}}/jouer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "actionJoueur": "" }
+
+> {%
+    client.test("39 → statut 400 (validator)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 40. actionJoueur MANQUANT → 400 (validator isString)   [GRATUIT]
+POST http://localhost:3000/api/campagnes/{{campagneId}}/jouer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ }
+
+> {%
+    client.test("40 → statut 400 (champ manquant)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 41. Campagne inexistante (999999) → 404 AVANT le LLM (preuve : la garde lève avant de payer)   [GRATUIT]
+POST http://localhost:3000/api/campagnes/999999/jouer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "actionJoueur": "Une action sur une campagne qui n'existe pas." }
+
+> {%
+    client.test("41 → garde lève (404/403), zéro appel LLM", function () {
+        client.assert(response.status === 404 || response.status === 403, "statut reçu : " + response.status);
+    });
+%}
+
+### 42. Param id non-entier (abc) → 400 (garde param('id').isInt())   [GRATUIT]
+POST http://localhost:3000/api/campagnes/abc/jouer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "actionJoueur": "Peu importe, l'id d'URL est invalide." }
+
+> {%
+    client.test("42 → statut 400 (id non-entier)", function () {
+        client.assert(response.status === 400, "statut reçu : " + response.status);
+    });
+%}
+
+### 43. Happy path → 200 + narration de Maïa   [⚠️ PAYANT — lance CE bloc SEUL, jamais en Run-all]
+POST http://localhost:3000/api/campagnes/{{campagneId}}/jouer
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "actionJoueur": "Kael pousse la lourde porte de la taverne et scrute la salle enfumée." }
+
+> {%
+    // Je logge le corps QUOI QU'IL ARRIVE : si ce n'est pas 200, je vois direct le message d'erreur.
+    client.log("43 → réponse brute : " + JSON.stringify(response.body));
+
+    client.test("43 → statut 200", function () {
+        client.assert(response.status === 200, "statut reçu : " + response.status);
+    });
+    client.test("43 → narration = chaîne non vide", function () {
+        client.assert(typeof response.body.narration === "string" && response.body.narration.length > 0,
+            "narration reçue : " + response.body.narration);
+    });
+    client.log("43 → narration de Maïa :\n" + response.body.narration);
+%}

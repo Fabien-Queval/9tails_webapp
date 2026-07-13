@@ -108,7 +108,7 @@ function relationEnMot(valeur: number): string {
     return 'neutre';
 }
 
-function serialiserRoster(pc: Personnage | null, npcsActifs: Npc[]): string {
+export function serialiserRoster(pc: Personnage | null, npcsActifs: Npc[]): string {
     // La ligne du PC — ou un repli si la campagne n'a pas encore de perso.
     const lignePc = pc
         ? `PERSONNAGE JOUEUR : ${pc.nom} (slug: ${pc.slug_pc})`

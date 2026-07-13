@@ -12,6 +12,7 @@ import {
 import {body, param, validationResult} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {proposerMemoiresPourScene} from "../services/memoireService";
+import { jouerTour } from "../services/jeuService";
 import personnageRoute from "./personnageRoute";
 import campagneNpcRoute from "./campagneNpcRoute";
 import arcRoute from "./arcRoute";
@@ -234,6 +235,31 @@ router.post('/:id/proposer-memoires', authMiddleware,
         return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
     }
     });
+
+// ----------------------------------------------- Route JOUER (narration LLM) -----------------------------------------------
+// Comme proposer-memoires : c'est une action au niveau de la campagne (appel LLM), elle reste ici.
+router.post('/:id/jouer', authMiddleware,
+    [
+        param('id').isInt(),
+        body('actionJoueur').isString().isLength({ min: 1, max: 10000 }),
+    ],
+    handleValidationErrors, async (req: Request, res: Response) => {
+    // { actionJoueur } = req.body : je déballe req.body et je vais y chercher SON champ actionJoueur,
+    // pour le poser dans une const du même nom.  (identique à : const actionJoueur = req.body.actionJoueur)
+    const { actionJoueur } = req.body;
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        const narration = await jouerTour(id_utilisateur, id_campagne, actionJoueur);
+        res.status(200).json({ narration });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
+
+        return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
+    }
+});
 
 // ----------------------------------------------- Montage des sous-ressources -----------------------------------------------
 // Chaque sous-ressource de la campagne vit dans son propre fichier de routes.

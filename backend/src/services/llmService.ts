@@ -70,3 +70,68 @@ export async function proposerMemoires(contexteScene: string, roster: string): P
 
     return parsed.data.vehiculeMemoires;   // le tableau, prêt pour applyMem plus tard
 }
+
+// Le contrat "conversation au format API" : un message = un role + son texte.
+// Je le nomme et l'exporte pour DRY (utilisé ici ET dans le map de jeuService) et pour
+// virer le `as const` : annoté avec ce type, TS tient les littéraux par le contexte.
+export type MessageLLM = { role: 'user' | 'assistant'; content: string };
+
+// genererNarration : je demande au MJ (Sonnet) de raconter la suite de la scène.
+// Différence de fond avec proposerMemoires : ici je veux de la PROSE LIBRE, pas du JSON.
+// Donc pas de schéma Zod, pas d'output_config, pas de safeParse — je rends le texte tel quel.
+export async function genererNarration(
+    systeme: string,
+    historiquePourLLM: MessageLLM[]
+): Promise<string> {
+    const client = new Anthropic();   // créé seulement quand on appelle vraiment le LLM
+    const reponse = await client.messages.create({
+        model: 'claude-sonnet-5',       // narration = le modèle le plus récent (meilleure tenue)
+        max_tokens: 2048,
+        system: systeme,                // le décor + les règles + le roster (la partie stable)
+        messages: historiquePourLLM,    // la conversation joueur/MJ, au format API
+    });
+
+    /* DISCIPLINE (comme proposerMemoires) : je décommente pour voir la santé + le coût d'un appel.
+    console.log('[narration] stop_reason :', reponse.stop_reason);
+    console.log('[narration] usage       :', reponse.usage);
+    */
+
+    // Même discipline que proposerMemoires : je vérifie d'abord qu'il a bien fini son tour.
+    if (reponse.stop_reason !== 'end_turn') {
+        throw new Error(`Narration inexploitable (stop_reason=${reponse.stop_reason})`);
+    }
+
+    // La réponse arrive en blocs ; je récupère le bloc texte = la narration.
+    const bloc = reponse.content.find((b) => b.type === 'text');
+    if (!bloc) {
+        throw new Error('Aucun bloc texte dans la narration');
+    }
+
+    return bloc.text;   // la prose du MJ, telle quelle — rien à valider, ce n'est pas structuré
+}
+
+// construireSystemeNarration : j'assemble le prompt système du MJ (Maïa).
+// Formateur PUR : je reçois le roster, les règles et le pseudo, je rends une chaîne.
+// (aucune lecture base/fichier ici — c'est jouerTour qui me fournit tout, comme construireSlugMemoire)
+export function construireSystemeNarration(
+    roster: string,
+    regles: Record<string, unknown>,
+    pseudo: string
+): string {
+    // Je retire les clés d'autrice (celles qui commencent par "_") : ce ne sont pas des
+    // données de jeu -> inutile de les payer en tokens ni de parasiter Maïa. (Elles sont
+    // toutes au niveau racine dans init_regles.json, un filtre à plat suffit.)
+    const reglesNettoyees = Object.fromEntries(
+        Object.entries(regles).filter(([cle]) => !cle.startsWith('_'))
+    );
+
+    return `Tu es Maïa, la Meneuse de Jeu de cette aventure. Ton identité, ton style de narration et les règles du jeu sont décrits en détail dans le bloc RÈGLES ci-dessous — lis-le et incarne-le.
+
+Le joueur derrière le personnage s'appelle ${pseudo}. Il peut t'interpeller à tout moment via une balise (HRP : ...) ; quand il le fait, tu lui réponds directement en tant que Maïa, puis tu reprends la narration.
+
+RÈGLES DU JEU ET TA PERSONA (système 9TStory) :
+${JSON.stringify(reglesNettoyees, null, 2)}
+
+PERSONNAGES RÉELS DE CETTE CAMPAGNE (n'invente aucun nom, utilise ceux-ci) :
+${roster}`;
+}
