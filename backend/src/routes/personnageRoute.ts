@@ -1,6 +1,6 @@
 import {Router, Request, Response} from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
-import {body} from "express-validator";
+import {body, param} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {validateFiche} from "../middleware/validateFiche";
 import {createPersonnage, getPersonnageByCampagne, updatePersonnage} from "../services/personnageService";
@@ -16,6 +16,8 @@ const router = Router({ mergeParams: true });
 
 router.post('/', authMiddleware,
     [
+        // Je valide l'id d'URL en entier avant le handler : req.params est du texte, je refuse un id non-numérique (NaN) avant qu'il atteigne le service et la base.
+        param('id').isInt(),
         // Validation FORMAT (express-validator) — champs plats uniquement
         body('slug_pc').matches(/^pc_[a-z0-9]+(_[a-z0-9]+)*$/),
         body('nom').isLength({ min: 2, max: 100 }),
@@ -48,7 +50,9 @@ router.post('/', authMiddleware,
         }
 });
 
-router.get('/', authMiddleware, (req: Request, res: Response) => {
+router.get('/', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id_campagne    = Number(req.params.id);   // URL
     const id_utilisateur = req.user!.id_utilisateur; // jeton
 
@@ -72,6 +76,7 @@ router.get('/', authMiddleware, (req: Request, res: Response) => {
 
 router.patch('/', authMiddleware,
     [
+        param('id').isInt(),
         body('description').isLength({ min: 1, max: 2000 }),
     ], handleValidationErrors, validateFiche,
     (req: Request, res: Response) => {

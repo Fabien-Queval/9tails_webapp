@@ -1,6 +1,6 @@
 import {Router, Request, Response} from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
-import {body} from "express-validator";
+import {body, param} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {createArc, getArcsByCampagne, terminerArc} from "../services/arcService";
 import {ArcStatut} from "../dal/arcDAL";
@@ -21,6 +21,8 @@ const router = Router({ mergeParams: true });
 
 router.post('/', authMiddleware,
     [
+        // Je valide l'id d'URL en entier avant le handler : req.params est du texte, je refuse un id non-numérique (NaN) avant qu'il atteigne le service et la base.
+        param('id').isInt(),
         body('titre').isLength({ min: 3, max: 100 }),
         body('resume').isLength({ min: 1, max: 2000 }),   // le "Ton:.. Objectif:.. Contexte:.." → requis
     ], handleValidationErrors,
@@ -39,7 +41,9 @@ router.post('/', authMiddleware,
         }
     });
 
-router.get('/', authMiddleware, (req: Request, res: Response) => {
+router.get('/', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id_campagne    = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
     const statut         = req.query.statut as ArcStatut | undefined;   // <-- query, pas body
@@ -54,7 +58,9 @@ router.get('/', authMiddleware, (req: Request, res: Response) => {
     }
 });
 
-router.patch('/:id_arc/terminer', authMiddleware, (req: Request, res: Response) => {
+router.patch('/:id_arc/terminer', authMiddleware,
+    [param('id').isInt(), param('id_arc').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
     const id_campagne    = Number(req.params.id);       // param hérité du parent (mergeParams)
     const id_arc         = Number(req.params.id_arc);   // param local
     const id_utilisateur = req.user!.id_utilisateur;
@@ -74,6 +80,7 @@ router.patch('/:id_arc/terminer', authMiddleware, (req: Request, res: Response) 
 
 router.post('/:id_arc/checkpoints', authMiddleware,
     [
+        param('id').isInt(), param('id_arc').isInt(),
         body('titre').isLength({ min: 3, max: 100 }),
         body('contenu').isLength({ min: 1, max: 10000 }),   // narratif → généreux, ajuste à ton goût
         body('resume').isLength({ min: 1 }).isLength({ max: 2000 }),

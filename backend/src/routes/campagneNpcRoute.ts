@@ -1,6 +1,6 @@
 import {Router, Request, Response} from 'express';
 import { authMiddleware } from '../middleware/authMiddleware';
-import {body, validationResult} from "express-validator";
+import {body, param, validationResult} from "express-validator";
 import { createNpc, getNpcsByCampagne } from "../services/npcService";
 
 // ----------------------------------------------- Routes NPC imbriquées sous CAMPAGNE -----------------------------------------------
@@ -16,6 +16,8 @@ const router = Router({ mergeParams: true });
 
 router.post('/', authMiddleware,
     [
+        // Je valide l'id d'URL en entier avant le handler : req.params est du texte, je refuse un id non-numérique (NaN) avant qu'il atteigne le service et la base.
+        param('id').isInt(),
         body('id_organisation').optional().isInt(), // si absent, ne râle pas ; s'il est là, qu'il soit un entier
         body('slug').matches(/^npc_[a-z0-9]+(_[a-z0-9]+)*$/),
         body('nom').isLength({ min: 2, max: 100 }),
@@ -50,7 +52,14 @@ router.post('/', authMiddleware,
         }
     });
 
-router.get('/', authMiddleware, (req: Request, res: Response) => {
+router.get('/', authMiddleware,
+    [param('id').isInt()],
+    (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     const id_campagne = Number(req.params.id);
     const id_utilisateur = req.user!.id_utilisateur;
 

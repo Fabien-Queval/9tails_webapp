@@ -1,8 +1,8 @@
 // memoireService.ts
-// Logique métier des mémoires.
-// Pour l'instant je n'écris que l'assembleur de slug (une fonction PURE).
-// La pose en base en lot (applyMem) viendra APRÈS le checkpoint : je la laisse en
-// esquisse commentée tout en bas, pour me souvenir où ça va.
+// Logique métier des mémoires. J'y regroupe trois choses :
+//   - construireSlugMemoire : l'assembleur de slug (fonction PURE, testable seule) ;
+//   - applyMem : la pose des mémoires en base en lot, appelée DANS la transaction du checkpoint ;
+//   - proposerMemoiresPourScene : mon pont vers le LLM (proposition → validation Zod).
 
 
 import { insertMemoireDal, Memoire } from '../dal/memoireDAL';
