@@ -14,4 +14,12 @@ export class JeuService {
       { actionJoueur }
     );
   }
+
+  // Je récupère tout le fil déjà en base, pour repeupler l'écran au chargement.
+  // GET /api/campagnes/:id/messages → { messages: [...] }. Je ne déclare que les champs que l'écran affiche.
+  chargerFil(idCampagne: number): Observable<{ messages: { emetteur: 'JOUEUR' | 'MJ'; contenu: string }[] }> {
+    return this.http.get<{ messages: { emetteur: 'JOUEUR' | 'MJ'; contenu: string }[] }>(
+      `http://localhost:3000/api/campagnes/${idCampagne}/messages`
+    );
+  }
 }

@@ -13,6 +13,7 @@ import {body, param, validationResult} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {proposerMemoiresPourScene} from "../services/memoireService";
 import { jouerTour } from "../services/jeuService";
+import { lireFilComplet } from "../services/messageService";
 import personnageRoute from "./personnageRoute";
 import campagneNpcRoute from "./campagneNpcRoute";
 import arcRoute from "./arcRoute";
@@ -258,6 +259,26 @@ router.post('/:id/jouer', authMiddleware,
         if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
 
         return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
+    }
+});
+
+// ----------------------------------------------- Route LIRE LE FIL (rechargement écran) -----------------------------------------------
+// GET : pas d'appel LLM, pas de body. Je rends tout l'historique de la partie pour que
+// l'écran de jeu se remplisse au chargement au lieu de repartir vide (les messages sont déjà en base).
+router.get('/:id/messages', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        // lireFilComplet vérifie d'abord que la campagne m'appartient (IDOR), puis rend le fil.
+        const messages = lireFilComplet(id_utilisateur, id_campagne);
+        res.status(200).json({ messages });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 });
 

@@ -39,8 +39,15 @@ export class Jeu implements OnInit {
     // (7) je lis le :id (string), le passe en nombre, le range dans le signal.
     const idBrut = this.route.snapshot.paramMap.get('id');
     this.idCampagne.set(Number(idBrut));
+
+    // (8) je récupère le fil déjà en base et je remplis le signal DANS le next
+    //     (la réponse est async → elle n'existe qu'ici ; zoneless → c'est le .set qui rafraîchit la vue).
+    //     Sans ça, l'écran repartait vide à chaque reload alors que les messages étaient bien enregistrés.
+    this.jeuService.chargerFil(this.idCampagne()).subscribe({
+      next: (reponse) => this.messages.set(reponse.messages),
+    });
   }
-  // (8) Le template s'affiche avec le bon id.
+  // (9) Le template s'affiche avec l'id ET le fil rechargé.
 
   // Au clic "Envoyer" : j'envoie l'action ; DANS le next, je range la narration reçue.
   // (async : le code après subscribe part tout de suite → la réponse n'existe que dans le next.)

@@ -92,3 +92,21 @@ export function getDerniersMessagesDal(id_campagne: number, limite: number): Mes
     // Je les ai lus du + récent au + ancien (DESC) pour attraper les bons ; je les remets à l'endroit.
     return messages.reverse();
 }
+
+// Le fil COMPLET d'une campagne, du plus vieux au plus récent (ASC) : c'est ce que l'écran affiche au chargement.
+// Différent de getDerniersMessagesDal (fenêtre limitée pour le LLM) : ici je veux TOUT l'historique, déjà dans l'ordre.
+export function getMessagesByCampagneDal(id_campagne: number): Message[] {
+    const stmt = db.prepare(`
+        SELECT id_message,
+               id_campagne,
+               emetteur,
+               contenu,
+               ordre,
+               date_creation
+        FROM MESSAGE
+        WHERE id_campagne = ?
+        ORDER BY ordre ASC
+    `);
+
+    return stmt.all(id_campagne) as Message[];
+}
