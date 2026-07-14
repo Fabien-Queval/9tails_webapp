@@ -3,7 +3,6 @@ import {
     Message,
     getDerniersMessagesDal,
     getMaxOrdreMessageDal,
-    getMessagesByCampagneDal,
     insertMessageDal
 } from "../dal/messageDAL";
 import {assertProprietaireCampagne} from "./campagneService";
@@ -32,13 +31,4 @@ export function lireFilRecent(id_utilisateur: number,
     assertProprietaireCampagne(id_campagne, id_utilisateur);
 
     return getDerniersMessagesDal(id_campagne, limite);
-}
-
-// Je lis le fil COMPLET pour l'écran : droit vérifié d'abord (IDOR), puis tout l'historique.
-// Pas de limite ici — l'écran rejoue toute la partie ; la fenêtre glissante, elle, reste réservée au LLM.
-export function lireFilComplet(id_utilisateur: number,
-                               id_campagne: number): Message[] {
-    assertProprietaireCampagne(id_campagne, id_utilisateur);
-
-    return getMessagesByCampagneDal(id_campagne);
 }

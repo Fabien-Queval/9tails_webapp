@@ -13,7 +13,7 @@ import {body, param, validationResult} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {proposerMemoiresPourScene} from "../services/memoireService";
 import { jouerTour } from "../services/jeuService";
-import { lireFilComplet } from "../services/messageService";
+import { lireFilRecent } from "../services/messageService";
 import personnageRoute from "./personnageRoute";
 import campagneNpcRoute from "./campagneNpcRoute";
 import arcRoute from "./arcRoute";
@@ -262,9 +262,16 @@ router.post('/:id/jouer', authMiddleware,
     }
 });
 
+// Ma limite d'affichage à l'écran : les 50 derniers messages.
+// Volontairement DISTINCTE de NB_MESSAGES_FENETRE (le budget de tokens du LLM, dans jeuService) :
+// ici c'est un confort de LECTURE, pas un budget — les deux nombres ne doivent pas se coupler.
+const LIMITE_FIL_ECRAN = 50;
+
 // ----------------------------------------------- Route LIRE LE FIL (rechargement écran) -----------------------------------------------
-// GET : pas d'appel LLM, pas de body. Je rends tout l'historique de la partie pour que
+// GET : pas d'appel LLM, pas de body. Je rends les derniers messages de la partie pour que
 // l'écran de jeu se remplisse au chargement au lieu de repartir vide (les messages sont déjà en base).
+// Je borne à LIMITE_FIL_ECRAN : un fil très long alourdirait le navigateur. Charger les plus
+// anciens au scroll = amélioration futur/P2, hors périmètre V0.
 router.get('/:id/messages', authMiddleware,
     [param('id').isInt()], handleValidationErrors,
     (req: Request, res: Response) => {
@@ -272,8 +279,9 @@ router.get('/:id/messages', authMiddleware,
     const id_utilisateur = req.user!.id_utilisateur;
 
     try {
-        // lireFilComplet vérifie d'abord que la campagne m'appartient (IDOR), puis rend le fil.
-        const messages = lireFilComplet(id_utilisateur, id_campagne);
+        // lireFilRecent vérifie d'abord que la campagne m'appartient (IDOR), puis rend les N derniers (chronologiques).
+        // Même fonction que celle qui nourrit Maïa, mais appelée avec MA limite d'écran, pas la sienne.
+        const messages = lireFilRecent(id_utilisateur, id_campagne, LIMITE_FIL_ECRAN);
         res.status(200).json({ messages });
     } catch (error: any) {
         if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
