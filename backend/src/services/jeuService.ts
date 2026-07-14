@@ -5,6 +5,7 @@ import { chargerRegles } from "../data/reglesLoader";
 import { getPersonnageByCampagneDal } from "../dal/personnageDal";
 import { getNpcsByCampagneDal } from "../dal/npcDAL";
 import { getUserById } from "../dal/userDAL";
+import {getArcsByCampagneDal} from "../dal/arcDAL";
 
 // ┌──────────────────────────────────────────────────────────────────┐
 // │  LEVIER DE RÉGLAGE — taille de la fenêtre glissante.              │
@@ -42,7 +43,11 @@ export async function jouerTour(
     const regles = chargerRegles();
     const utilisateur = getUserById(id_utilisateur);
     const pseudo = utilisateur?.pseudo ?? 'le joueur';   // repli défensif si l'user a disparu
-    const systeme = construireSystemeNarration(roster, regles, pseudo);
+    // Je récupère l'arc EN_COURS pour injecter son contexte (ton/objectif/situation) dans le prompt.
+    const arcsEnCours   = getArcsByCampagneDal(id_campagne, 'EN_COURS');
+    const arcCourant = arcsEnCours[arcsEnCours.length - 1];   // l'acte actif (le plus récent)
+    const contexteAventure = arcCourant?.resume ?? '';     // repli si la campagne n'a pas encore d'arc
+    const systeme = construireSystemeNarration(roster, regles, pseudo, contexteAventure);
 
     // 5. Le MJ raconte (le SEUL appel payant du tour).
     const narration = await genererNarration(systeme, historiquePourLLM);

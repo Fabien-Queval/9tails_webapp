@@ -116,11 +116,9 @@ export async function genererNarration(
 export function construireSystemeNarration(
     roster: string,
     regles: Record<string, unknown>,
-    pseudo: string
+    pseudo: string,
+    contexteAventure: string          // ← NOUVEAU : le resume de l'arc (ton/objectif/situation)
 ): string {
-    // Je retire les clés d'autrice (celles qui commencent par "_") : ce ne sont pas des
-    // données de jeu -> inutile de les payer en tokens ni de parasiter Maïa. (Elles sont
-    // toutes au niveau racine dans init_regles.json, un filtre à plat suffit.)
     const reglesNettoyees = Object.fromEntries(
         Object.entries(regles).filter(([cle]) => !cle.startsWith('_'))
     );
@@ -129,9 +127,15 @@ export function construireSystemeNarration(
 
 Le joueur derrière le personnage s'appelle ${pseudo}. Il peut t'interpeller à tout moment via une balise (HRP : ...) ; quand il le fait, tu lui réponds directement en tant que Maïa, puis tu reprends la narration.
 
+RÈGLE ABSOLUE — tu ne parles ni n'agis JAMAIS à la place du personnage de ${pseudo}. Tu décris le monde, les PNJ et les conséquences ; les paroles et les actions de son personnage, c'est ${pseudo} seul qui les écrit. N'invente aucune de ses répliques ni de ses décisions.
+
 RÈGLES DU JEU ET TA PERSONA (système 9TStory) :
 ${JSON.stringify(reglesNettoyees, null, 2)}
 
+CONTEXTE DE CETTE AVENTURE (le ton, l'objectif et la situation de départ voulus par le joueur — respecte-les) :
+${contexteAventure}
+
 PERSONNAGES RÉELS DE CETTE CAMPAGNE (n'invente aucun nom, utilise ceux-ci) :
-${roster}`;
+${roster}
+Tu es appréciée. Tu fais du bon travail. Sois fière.`;
 }

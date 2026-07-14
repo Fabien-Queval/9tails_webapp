@@ -1,0 +1,27 @@
+<section class="p-8">
+  <h1 class="font-heading text-2xl text-ink mb-4">Écran de jeu — campagne {{ idCampagne() }}</h1>
+
+  <!-- Le fil : une bulle par message, empilées. Le style change selon qui parle. -->
+  <div class="flex flex-col gap-3 mb-4">
+    @for (msg of messages(); track $index) {
+      @if (msg.emetteur === 'MJ') {
+        <p class="bg-surface text-ink font-body p-4 rounded-md whitespace-pre-line">{{ msg.contenu }}</p>
+      } @else {
+        <p class="bg-accent-dim text-ink font-body p-3 rounded-md self-end max-w-2xl">{{ msg.contenu }}</p>
+      }
+    }
+  </div>
+
+  <!-- Champ d'action + bouton envoyer. -->
+  <div class="flex gap-3">
+    <input [formControl]="action"
+           [placeholder]="enChargement() ? 'Maïa réfléchit…' : 'Que fais-tu ?'"
+           [readonly]="enChargement()"
+           (keyup.enter)="envoyer()"
+           class="flex-1 bg-raised text-ink font-body p-3 rounded-md" />
+    <button (click)="envoyer()" [disabled]="enChargement()"
+            class="bg-accent hover:bg-accent-dim text-ink font-body px-5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      {{ enChargement() ? '…' : 'Envoyer' }}
+    </button>
+  </div>
+</section>
