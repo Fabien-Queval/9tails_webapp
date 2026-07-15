@@ -12,7 +12,7 @@ import {
 import {body, param, validationResult} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {proposerMemoiresPourScene} from "../services/memoireService";
-import { jouerTour } from "../services/jeuService";
+import { jouerTour, lancerJet } from "../services/jeuService";
 import { lireFilRecent } from "../services/messageService";
 import personnageRoute from "./personnageRoute";
 import campagneNpcRoute from "./campagneNpcRoute";
@@ -252,13 +252,39 @@ router.post('/:id/jouer', authMiddleware,
     const id_utilisateur = req.user!.id_utilisateur;
 
     try {
-        const narration = await jouerTour(id_utilisateur, id_campagne, actionJoueur);
-        res.status(200).json({ narration });
+        // jouerTour me rend { recit, jet_propose } ; je renvoie l'objet tel quel au front.
+        const reponseMaia = await jouerTour(id_utilisateur, id_campagne, actionJoueur);
+        res.status(200).json(reponseMaia);
     } catch (error: any) {
         if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
         if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
 
         return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
+    }
+});
+
+// ----------------------------------------------- Route JET (dé contextualisé) -----------------------------------------------
+// Le front envoie { caracteristique, difficulte } ; le backend lit la fiche, calcule le pool, lance le dé.
+router.post('/:id/jet', authMiddleware,
+    [
+        param('id').isInt(),
+        body('caracteristique').isIn(['CORPS', 'SENS', 'ESPRIT', 'SOCIAL']),
+        body('difficulte').isInt({ min: 1, max: 9 }).toInt(),
+    ],
+    handleValidationErrors,
+    (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+    const { caracteristique, difficulte } = req.body;
+
+    try {
+        const resultat = lancerJet(id_utilisateur, id_campagne, caracteristique, difficulte);
+        res.status(200).json(resultat);
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')         return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable')   return res.status(404).json({ message: error.message });
+        if (error.message === 'Personnage introuvable') return res.status(404).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 });
 
