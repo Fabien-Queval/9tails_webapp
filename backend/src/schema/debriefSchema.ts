@@ -8,6 +8,9 @@ const NouveauPersonnageSchema = z.object({
     description: z.string().min(1),
 });
 
+// Le tableau des nouveaux PNJ — validés par l'humain à la clôture (débrief) avant d'être gravés.
+export const NouveauxPersonnagesSchema = z.array(NouveauPersonnageSchema);
+
 // La sortie complète du débrief.
 export const DebriefSchema = z.object({
     titre:                z.string().min(1),   // le nom du CP

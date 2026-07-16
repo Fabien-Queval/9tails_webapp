@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { KeyValuePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
-import { JeuService, JetPropose } from '../../services/jeu';
+import { JeuService, JetPropose, NpcPropose, SouvenirPropose } from '../../services/jeu';
 import {FicheJson, Personnage, PersonnageService} from '../../services/personnage';
 
 // Un message du fil, tel qu'on l'affiche : qui parle + son texte.
@@ -57,6 +57,30 @@ export class Jeu implements OnInit {
   // true au départ pour qu'il soit visible d'emblée ; bascule sur false si tu préfères
   // laisser un maximum de place au fil dès l'arrivée sur l'écran.
   panneauOuvert = signal(true);
+
+  // Suis-je en train de débriefer ? (verrou du bouton pendant l'appel payant — même rôle qu'enChargement)
+  enDebrief = signal(false);
+
+  // Seuil de "scène pleine" : au-delà, on presse le joueur à clôturer (nudge, JAMAIS un verrou).
+  // Volontairement sous NB_MESSAGES_DEBRIEF (100, backend) : on invite AVANT que la fenêtre du débrief ne déborde.
+  readonly SEUIL_DEBRIEF = 40;
+
+  // Repère posé au dernier débrief : la jauge compte les messages APPARUS DEPUIS.
+  private jaugeBase = signal(0);
+
+  // La jauge = messages de la scène en cours (fil actuel − repère du dernier débrief).
+  jaugeScene   = computed(() => this.messages().length - this.jaugeBase());
+  jaugePleine  = computed(() => this.jaugeScene() >= this.SEUIL_DEBRIEF);   // pilote la COULEUR, pas le bouton
+  pourcentageJauge = computed(() => Math.min(100, (this.jaugeScene() / this.SEUIL_DEBRIEF) * 100));
+
+  // --- Modale de CLÔTURE (débrief) : Maïa PROPOSE → l'humain valide → on grave ---
+  modaleDebrief  = signal(false);                                     // la modale est-elle ouverte ?
+  arcDebrief     = signal<number | null>(null);                       // l'arc à qui rattacher le checkpoint (renvoyé par le débrief)
+  propCheckpoint = signal<{ titre: string; resume: string; contenu: string } | null>(null);
+  propNpcs       = signal<NpcPropose[]>([]);                          // PNJ proposés, retirables
+  propMemoires   = signal<SouvenirPropose[]>([]);                     // souvenirs proposés, retirables
+  enregistrement = signal(false);                                     // verrou du bouton "Enregistrer"
+  erreurDebrief  = signal<string | null>(null);                       // erreur affichée DANS la modale (plus d'avalage silencieux)
 
 
   // (5) Construction finie. (6) Angular appelle ngOnInit :
@@ -144,4 +168,81 @@ export class Jeu implements OnInit {
       error: () => this.enChargement.set(false),
     });
   }
+
+  // Le clic "Clôturer la scène" : je récupère l'arc ouvert, PUIS je demande à Maïa une PROPOSITION.
+  // Rien n'est gravé ici — j'ouvre la modale de validation, l'humain tranche, le commit vient après.
+  debriefer(): void {
+    if (this.enDebrief()) return;          // garde : un débrief tourne déjà → je sors
+    this.enDebrief.set(true);              // je verrouille le bouton
+    this.erreurDebrief.set(null);
+
+    // 1. L'arc ENCORE OUVERT (le dernier).
+    this.jeuService.getArcsEnCours(this.idCampagne()).subscribe({
+      next: (reponse) => {
+        const arc = reponse.arcs[reponse.arcs.length - 1];
+        if (!arc) {                        // aucun arc ouvert → rien à clôturer
+          this.erreurDebrief.set('Aucun arc ouvert à clôturer.');
+          this.enDebrief.set(false);
+          return;
+        }
+
+        // 2. La PROPOSITION de Maïa (appel payant). Je remplis la modale, je ne grave RIEN.
+        this.jeuService.debriefer(this.idCampagne(), arc.id_arc).subscribe({
+          next: (res) => {
+            this.arcDebrief.set(res.id_arc);
+            this.propCheckpoint.set({ titre: res.debrief.titre, resume: res.debrief.resume, contenu: res.debrief.contenu });
+            this.propNpcs.set(res.debrief.nouveaux_personnages);
+            this.propMemoires.set(res.debrief.souvenirs);
+            this.modaleDebrief.set(true);        // j'ouvre la modale de validation
+            this.enDebrief.set(false);
+          },
+          error: (err) => {
+            this.erreurDebrief.set(err.error?.message ?? 'Échec du débrief.');
+            this.enDebrief.set(false);
+          },
+        });
+      },
+      error: () => this.enDebrief.set(false),
+    });
+  }
+
+  // Validation humaine : retirer un PNJ ou un souvenir proposé avant de graver.
+  retirerNpc(i: number): void {
+    this.propNpcs.update(list => list.filter((_, idx) => idx !== i));
+  }
+  retirerMemoire(i: number): void {
+    this.propMemoires.update(list => list.filter((_, idx) => idx !== i));
+  }
+
+  // Le clic "Enregistrer ce checkpoint" : je grave la proposition VALIDÉE (checkpoint + PNJ + souvenirs retenus).
+  enregistrerCheckpoint(): void {
+    const cp = this.propCheckpoint();
+    const arc = this.arcDebrief();
+    if (!cp || arc === null || this.enregistrement()) return;
+
+    this.enregistrement.set(true);
+    this.erreurDebrief.set(null);
+
+    this.jeuService.enregistrerCheckpoint(this.idCampagne(), arc, {
+      titre:   cp.titre,
+      resume:  cp.resume,
+      contenu: cp.contenu,
+      nouveauxPersonnages: this.propNpcs(),
+      memoires:            this.propMemoires(),
+    }).subscribe({
+      next: () => {
+        // Gravé : je referme, je confirme dans le fil, je remets la jauge à zéro.
+        this.messages.update(fil => [...fil, { emetteur: 'MJ', contenu: `— Scène clôturée : « ${cp.titre} » — ${cp.resume}` }]);
+        this.jaugeBase.set(this.messages().length);
+        this.modaleDebrief.set(false);
+        this.enregistrement.set(false);
+      },
+      error: (err) => {
+        // Plus d'avalage silencieux : j'affiche l'erreur DANS la modale, l'humain corrige et réessaie.
+        this.erreurDebrief.set(err.error?.message ?? "Échec de l'enregistrement.");
+        this.enregistrement.set(false);
+      },
+    });
+  }
+
 }

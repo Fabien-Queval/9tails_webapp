@@ -7,6 +7,7 @@ import {ArcStatut} from "../dal/arcDAL";
 import {createCheckpoint} from "../services/checkpointService";
 import {MemoiresProposeesSchema} from "../schema/memoireSchema";
 import {debriefer} from "../services/debriefService";
+import {NouveauxPersonnagesSchema} from "../schema/debriefSchema";
 
 // ----------------------------------------------- Routes de ARC (+ CHECKPOINT) -----------------------------------------------
 // Ce routeur est monté dans campagneRoute : router.use('/:id/arcs', arcRoute)
@@ -98,8 +99,15 @@ router.post('/:id_arc/checkpoints', authMiddleware,
         }
         const memoires = parsed.data;   // le tableau validé, prêt à passer au service
 
+        // Nouveaux PNJ validés par l'humain à la clôture (débrief). Optionnel → défaut [].
+        const parsedNpcs = NouveauxPersonnagesSchema.safeParse(req.body.nouveauxPersonnages ?? []);
+        if (!parsedNpcs.success) {
+            return res.status(400).json({ errors: parsedNpcs.error.issues });
+        }
+        const nouveauxPersonnages = parsedNpcs.data;
+
     try {
-        const result = createCheckpoint({id_utilisateur, id_campagne, id_arc, titre, contenu, resume, memoires});
+        const result = createCheckpoint({id_utilisateur, id_campagne, id_arc, titre, contenu, resume, nouveauxPersonnages, memoires});
         res.status(201).json(result);           //result = { checkpoint; memoires } → envoyé tel quel
     } catch (error: any) {
         if (error.message === 'Accès interdit')                          return res.status(403).json({ message: error.message });
@@ -121,8 +129,8 @@ router.post('/:id_arc/debrief', authMiddleware,
     const id_utilisateur = req.user!.id_utilisateur;
 
     try {
-        const resultat = await debriefer(id_utilisateur, id_campagne, id_arc);
-        res.status(201).json(resultat);   // { debrief, resultat: { checkpoint, npcs, memoires } }
+        const proposition = await debriefer(id_utilisateur, id_campagne, id_arc);
+        res.status(200).json(proposition);   // { debrief, id_arc } — PROPOSITION, rien n'est gravé
     } catch (error: any) {
         if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
         if (error.message === 'Arc introuvable')      return res.status(404).json({ message: error.message });

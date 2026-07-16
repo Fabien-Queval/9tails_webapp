@@ -20,6 +20,28 @@ export type RollResult = {
   resultat: 'success' | 'fail_forward';
 };
 
+// Un PNJ que Maïa propose de créer au débrief (miroir de NouveauPersonnageSchema backend).
+export type NpcPropose = { nom: string; description: string };
+
+// Un souvenir proposé par Maïa (miroir de MemoireProposeeSchema backend).
+// cible_type/cible_slug typés larges : le front ne fait que les AFFICHER et les RENVOYER tels quels.
+export type SouvenirPropose = {
+  npc: string;
+  nature: string;
+  cible_type: string | null;
+  cible_slug: string | null;
+  contenu: string;
+};
+
+// La PROPOSITION de débrief que Maïa renvoie (RIEN n'est encore gravé — l'humain valide dans la modale).
+export type DebriefPropose = {
+  titre: string;
+  resume: string;
+  contenu: string;
+  nouveaux_personnages: NpcPropose[];
+  souvenirs: SouvenirPropose[];
+};
+
 @Injectable({ providedIn: 'root' })
 export class JeuService {
   private http = inject(HttpClient);
@@ -49,4 +71,38 @@ export class JeuService {
       { caracteristique, difficulte }
     );
   }
+
+  // Je vais chercher les arcs ENCORE OUVERTS de la campagne : c'est là que je rattacherai le débrief.
+  // GET /api/campagnes/:id/arcs?statut=EN_COURS  →  { arcs: [...] }
+  // Le "?statut=EN_COURS" au bout de l'URL, c'est un FILTRE que mon backend lit tout seul.
+  // Je ne déclare que les 2 champs qui me serviront : l'id_arc (pour la route débrief) et le titre (pour l'affichage).
+  getArcsEnCours(idCampagne: number): Observable<{ arcs: { id_arc: number; titre: string }[] }> {
+    return this.http.get<{ arcs: { id_arc: number; titre: string }[] }>(
+      `http://localhost:3000/api/campagnes/${idCampagne}/arcs?statut=EN_COURS`
+    );
+  }
+
+  // Je demande à Maïa une PROPOSITION de débrief : elle synthétise la scène, mais RIEN n'est gravé.
+  // POST /api/campagnes/:id/arcs/:id_arc/debrief — corps {} (Maïa lit le fil côté backend).
+  // Je reçois { debrief, id_arc } : la proposition à valider + l'arc à qui rattacher le checkpoint.
+  debriefer(idCampagne: number, idArc: number): Observable<{ debrief: DebriefPropose; id_arc: number }> {
+    return this.http.post<{ debrief: DebriefPropose; id_arc: number }>(
+      `http://localhost:3000/api/campagnes/${idCampagne}/arcs/${idArc}/debrief`,
+      {}
+    );
+  }
+
+  // Le COMMIT de la clôture, une fois l'humain validé dans la modale : je grave le checkpoint
+  // (+ les PNJ retenus + les souvenirs retenus). POST /api/campagnes/:id/arcs/:id_arc/checkpoints.
+  enregistrerCheckpoint(
+    idCampagne: number,
+    idArc: number,
+    payload: { titre: string; resume: string; contenu: string; nouveauxPersonnages: NpcPropose[]; memoires: SouvenirPropose[] }
+  ): Observable<unknown> {
+    return this.http.post(
+      `http://localhost:3000/api/campagnes/${idCampagne}/arcs/${idArc}/checkpoints`,
+      payload
+    );
+  }
+
 }

@@ -213,9 +213,10 @@ Réponds UNIQUEMENT via le format structuré demandé.
 4. nouveaux_personnages : les personnages que TU as fait intervenir et qui N'EXISTENT PAS dans la
    liste ci-dessous. Donne un nom et une courte description. Le nom doit être NOUVEAU, absent de la
    liste — n'y remets JAMAIS un personnage déjà connu. Si aucun, tableau vide.
-5. souvenirs : 1 à 2 événements marquants qu'un personnage garderait en mémoire. Pour chacun : le
-   personnage concerné (par son nom EXACT — de la liste, OU un que tu viens de créer), la nature
-   (tag court en minuscules_underscore) et le contenu. Si aucun, tableau vide.
+5. souvenirs : 1 à 2 événements marquants qu'un PNJ garderait en mémoire. Pour chacun : le
+   PNJ concerné (par son nom EXACT — de la liste, OU un que tu viens de créer), la nature
+   (tag court en minuscules_underscore) et le contenu. Le personnage concerné est TOUJOURS un PNJ,
+   JAMAIS le PERSONNAGE JOUEUR (le PC ne mémorise pas via ce système). Si aucun, tableau vide.
 
 CONTEXTE DE L'ARC :
 ${contexteArc}
@@ -228,12 +229,21 @@ ${rosterComplet}`;
 // Même pipeline "sortie structurée" que proposerMemoires, mais sur Sonnet (tâche de jugement).
 export async function genererDebrief(systeme: string, fil: MessageLLM[]): Promise<Debrief> {
     const client = new Anthropic();
+
+    // Sonnet REFUSE que la conversation finisse sur un message 'assistant' (= "prefill").
+    // Or le fil RP se termine presque toujours sur une narration de Maïa (assistant).
+    // Je referme donc avec un message 'user' qui COMMANDE le débrief → la conversation finit bien sur 'user'.
+    const filClos: MessageLLM[] = [
+        ...fil,
+        { role: 'user', content: '— FIN DE LA SCÈNE —\nFais maintenant le débrief de toute la scène ci-dessus, au format structuré demandé.' },
+    ];
+
     const reponse = await client.messages.create({
         model: 'claude-sonnet-5',        // synthèse + jugement -> Sonnet, pas Haiku
-        max_tokens: 2048,                // resume + quelques PNJ + quelques souvenirs
+        max_tokens: 8192,                // débrief = titre + resume + contenu DÉTAILLÉ + PNJ + souvenirs → plafond large (on ne paie QUE ce qui est réellement généré)
         system: systeme,
         output_config: { format: zodOutputFormat(DebriefSchema) },   // je la FORCE à la forme
-        messages: fil,                   // la scène à débriefer, au format API
+        messages: filClos,               // ← le fil + le message de clôture 'user', au lieu de `fil` seul
     });
 
     // Réponse complète ? (structuré -> end_turn ; le reste = inexploitable)

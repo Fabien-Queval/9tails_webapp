@@ -5,10 +5,13 @@ import { getPersonnageByCampagneDal } from "../dal/personnageDal";
 import { getNpcsByCampagneDal } from "../dal/npcDAL";
 import { serialiserRoster } from "./memoireService";
 import { genererDebrief, construireSystemeDebrief, MessageLLM } from "./llmService";
-import { createCheckpoint } from "./checkpointService";
 
 const NB_MESSAGES_DEBRIEF = 100;   // la fenetre a resumer : la scene entiere, genereux
 
+// PROPOSE-ONLY : je ne grave RIEN ici.
+// Maia synthetise la scene close et PROPOSE (titre/resume/contenu + nouveaux PNJ + souvenirs).
+// L'humain valide dans la modale de cloture, PUIS le commit passe par la route checkpoint.
+// (archi S3 : le LLM propose, l'humain valide.)
 export async function debriefer(id_utilisateur: number, id_campagne: number, id_arc: number) {
     assertProprietaireCampagne(id_campagne, id_utilisateur);   // garde IDOR d'abord
 
@@ -28,25 +31,11 @@ export async function debriefer(id_utilisateur: number, id_campagne: number, id_
     const tousLesNpcs  = getNpcsByCampagneDal(id_campagne);   // SANS filtre = tous les statuts
     const rosterComplet = serialiserRoster(pc, tousLesNpcs);
 
-    // 3. J'assemble le prompt et j'appelle Maia.
+    // 3. J'assemble le prompt et j'appelle Maia -> une PROPOSITION, rien n'est grave.
     const systeme = construireSystemeDebrief(rosterComplet, contexteArc);
     const debrief = await genererDebrief(systeme, filPourLLM);
 
-    // 4. J'ecris tout dans UNE transaction : checkpoint + nouveaux PNJ + memoires.
-    const resultat = createCheckpoint({
-        id_utilisateur,
-        id_campagne,
-        id_arc,
-        titre:   debrief.titre,
-        contenu: debrief.contenu,
-        resume:  debrief.resume,
-        nouveauxPersonnages: debrief.nouveaux_personnages,
-        memoires:            debrief.souvenirs,
-    });
-
-    // 5. TODO snapshot : regenerer le JSON une fois generateSnapshot (factory) ecrit.
-    // generateSnapshot(id_campagne, id_utilisateur);
-
-    // Je renvoie la synthese de Maia + ce qui a reellement ete grave en base.
-    return { debrief, resultat };
+    // Je renvoie la proposition + l'arc cible. Le commit (checkpoint + PNJ + memoires)
+    // viendra APRES validation humaine, via la route checkpoint.
+    return { debrief, id_arc };
 }
