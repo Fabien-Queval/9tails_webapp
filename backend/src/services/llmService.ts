@@ -8,6 +8,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import {MemoireProposee, SortieLLMSchema} from '../schema/memoireSchema';
 import { JetProposeSchema, JetPropose, Narration } from '../schema/narrationSchema';
+import {Debrief, DebriefSchema} from "../schema/debriefSchema";
 
 // Le client lit tout seul ma clé dans process.env.ANTHROPIC_API_KEY.
 // (Donc dotenv doit être chargé AVANT que ce module s'exécute — cf. poc-llm.ts.)
@@ -195,4 +196,62 @@ ${contexteAventure}
 PERSONNAGES RÉELS DE CETTE CAMPAGNE (n'invente aucun nom, utilise ceux-ci) :
 ${roster}
 Tu es appréciée. Tu fais du bon travail. Sois fière.`;
+}
+
+// ============================ DÉBRIEF ============================
+
+// construireSystemeDebrief : le prompt du débrief (fonction PURE, comme construireSystemeNarration).
+// Je reçois le roster COMPLET (tous statuts) + le contexte de l'arc, je rends la consigne système.
+export function construireSystemeDebrief(rosterComplet: string, contexteArc: string): string {
+    return `Tu es Maïa, la Meneuse de Jeu. On vient de clore une scène : fais-en le débrief.
+Réponds UNIQUEMENT via le format structuré demandé.
+
+1. titre : un titre court et évocateur de la scène (ex. "La Mort des Cieux").
+2. resume : UNE seule phrase d'accroche, lisible en un coup d'oeil (elle s'affichera au survol dans le Codex).
+3. contenu : la synthèse DÉTAILLÉE de la scène — les moments qui comptent, dans l'ordre :
+   trajet, arrivée, discussions/disputes, décisions, combat, conclusion.
+4. nouveaux_personnages : les personnages que TU as fait intervenir et qui N'EXISTENT PAS dans la
+   liste ci-dessous. Donne un nom et une courte description. Le nom doit être NOUVEAU, absent de la
+   liste — n'y remets JAMAIS un personnage déjà connu. Si aucun, tableau vide.
+5. souvenirs : 1 à 2 événements marquants qu'un personnage garderait en mémoire. Pour chacun : le
+   personnage concerné (par son nom EXACT — de la liste, OU un que tu viens de créer), la nature
+   (tag court en minuscules_underscore) et le contenu. Si aucun, tableau vide.
+
+CONTEXTE DE L'ARC :
+${contexteArc}
+
+PERSONNAGES DÉJÀ CONNUS (actifs ou non — un nouveau nom NE DOIT figurer nulle part ici) :
+${rosterComplet}`;
+}
+
+// genererDebrief : au débrief, Sonnet synthétise la scène et propose PNJ + souvenirs.
+// Même pipeline "sortie structurée" que proposerMemoires, mais sur Sonnet (tâche de jugement).
+export async function genererDebrief(systeme: string, fil: MessageLLM[]): Promise<Debrief> {
+    const client = new Anthropic();
+    const reponse = await client.messages.create({
+        model: 'claude-sonnet-5',        // synthèse + jugement -> Sonnet, pas Haiku
+        max_tokens: 2048,                // resume + quelques PNJ + quelques souvenirs
+        system: systeme,
+        output_config: { format: zodOutputFormat(DebriefSchema) },   // je la FORCE à la forme
+        messages: fil,                   // la scène à débriefer, au format API
+    });
+
+    // Réponse complète ? (structuré -> end_turn ; le reste = inexploitable)
+    if (reponse.stop_reason !== 'end_turn') {
+        throw new Error(`Débrief inexploitable (stop_reason=${reponse.stop_reason})`);
+    }
+
+    // Le JSON est dans le bloc texte.
+    const bloc = reponse.content.find((b) => b.type === 'text');
+    if (!bloc) {
+        throw new Error('Aucun bloc texte dans la réponse du débrief');
+    }
+
+    // LLM suspect : je re-valide avec MON schéma.
+    const parsed = DebriefSchema.safeParse(JSON.parse(bloc.text));
+    if (!parsed.success) {
+        throw new Error('Sortie débrief non conforme : ' + parsed.error.message);
+    }
+
+    return parsed.data;   // { titre, resume, contenu, nouveaux_personnages, souvenirs }
 }
