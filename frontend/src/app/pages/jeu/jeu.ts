@@ -1,14 +1,16 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { KeyValuePipe } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { JeuService, JetPropose } from '../../services/jeu';
+import {FicheJson, Personnage, PersonnageService} from '../../services/personnage';
 
 // Un message du fil, tel qu'on l'affiche : qui parle + son texte.
 type MessageFil = { emetteur: 'JOUEUR' | 'MJ'; contenu: string };
 
 @Component({
   selector: 'app-jeu',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, KeyValuePipe],
   templateUrl: './jeu.html',
   styleUrl: './jeu.scss',
 })
@@ -20,6 +22,15 @@ export class Jeu implements OnInit {
   private route = inject(ActivatedRoute);
   //     + le service qui parle au backend de jeu (comme inject(CampagneService) au dashboard).
   private jeuService = inject(JeuService);
+
+  private personnageService = inject(PersonnageService);
+
+  personnage = signal<Personnage | null>(null);
+
+  fiche = computed<FicheJson | null>(() => {
+    const pc = this.personnage();
+    return pc ? JSON.parse(pc.fiche_json) as FicheJson : null;
+  });
 
   // (4) idCampagne démarre à 0.
   idCampagne = signal<number>(0);
@@ -42,6 +53,11 @@ export class Jeu implements OnInit {
   // La modale de dés est-elle ouverte ? (false au départ : pas de modale dans la figure)
   modaleOuverte = signal(false);
 
+  // Le panneau latéral gauche (fiche perso, journal, codex) est-il déplié ?
+  // true au départ pour qu'il soit visible d'emblée ; bascule sur false si tu préfères
+  // laisser un maximum de place au fil dès l'arrivée sur l'écran.
+  panneauOuvert = signal(true);
+
 
   // (5) Construction finie. (6) Angular appelle ngOnInit :
   ngOnInit(): void {
@@ -54,6 +70,11 @@ export class Jeu implements OnInit {
     //     Sans ça, l'écran repartait vide à chaque reload alors que les messages étaient bien enregistrés.
     this.jeuService.chargerFil(this.idCampagne()).subscribe({
       next: (reponse) => this.messages.set(reponse.messages),
+    });
+
+    // Je charge aussi la fiche de perso pour le widget
+    this.personnageService.getPersonnageByCampagneFront(this.idCampagne()).subscribe({
+      next: (reponse) => this.personnage.set(reponse.personnage),
     });
   }
   // (9) Le template s'affiche avec l'id ET le fil rechargé.

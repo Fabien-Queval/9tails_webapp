@@ -1,4 +1,74 @@
-<section class="p-8">
+<!-- La rangée : panneau latéral gauche + colonne principale de jeu, côte à côte. -->
+<div class="flex">
+
+  <!-- Panneau latéral gauche, rétractable.
+       Sa largeur est animée selon panneauOuvert() : w-72 déplié, w-12 replié.
+       shrink-0 l'empêche d'être écrasé par la colonne principale ; overflow-hidden
+       masque proprement le contenu pendant l'animation de largeur. -->
+  <aside class="bg-surface min-h-screen shrink-0 overflow-hidden transition-all duration-300"
+         [class.w-72]="panneauOuvert()" [class.w-12]="!panneauOuvert()">
+
+    <!-- Le petit bouton déplier/replier, TOUJOURS visible (même panneau fermé). -->
+    <button (click)="panneauOuvert.update(v => !v)"
+            [title]="panneauOuvert() ? 'Replier' : 'Déplier'"
+            class="w-full flex justify-end p-3 text-xl text-muted hover:text-accent transition-colors">
+      {{ panneauOuvert() ? '‹' : '›' }}
+    </button>
+
+    <!-- Contenu : visible seulement quand le panneau est déplié. -->
+    @if (panneauOuvert()) {
+      <nav class="flex flex-col gap-2 px-3 pb-4">
+
+        <!-- Fiche de personnage -->
+        @if (personnage(); as pc) {
+          <div class="bg-raised rounded-md p-3">
+            <h2 class="font-heading text-accent text-sm mb-2">{{ pc.nom }}</h2>
+
+            @if (fiche(); as f) {
+              <p class="text-muted font-body text-xs mb-2">Rang d'aventure {{ f.rang_aventure }}</p>
+
+              <ul class="flex flex-col gap-1 text-ink font-body text-sm">
+                <li class="flex justify-between"><span>Corps</span><span>{{ f.caracteristiques.corps }}</span></li>
+                <li class="flex justify-between"><span>Sens</span><span>{{ f.caracteristiques.sens }}</span></li>
+                <li class="flex justify-between"><span>Esprit</span><span>{{ f.caracteristiques.esprit }}</span></li>
+                <li class="flex justify-between"><span>Social</span><span>{{ f.caracteristiques.social }}</span></li>
+              </ul>
+
+              <!-- Compétences : dictionnaire optionnel. Gardé par @if (undefined si aucune).
+                   La boucle keyvalue affiche une ligne par clé → s'ajuste tout seul quand le
+                   wizard remplira la fiche. Rien à retoucher ici quand une compétence s'ajoute. -->
+              @if (f.competences; as comp) {
+                <h3 class="font-heading text-accent text-xs mt-3 mb-1">Compétences</h3>
+                <ul class="flex flex-col gap-1 text-ink font-body text-sm">
+                  @for (c of comp | keyvalue; track c.key) {
+                    <li class="flex justify-between"><span>{{ c.key }}</span><span>{{ c.value }}</span></li>
+                  }
+                </ul>
+              }
+            }
+          </div>
+        } @else {
+          <div class="bg-raised rounded-md p-3">
+            <p class="text-muted font-body text-xs">Aucun personnage pour cette campagne.</p>
+          </div>
+        }
+
+        <!-- Journal (bouton à brancher plus tard). -->
+        <button class="bg-raised hover:bg-raised/70 text-ink font-body text-left rounded-md p-3 transition-colors">
+          📖 &nbsp;Journal
+        </button>
+
+        <!-- Codex (bouton à brancher plus tard). -->
+        <button class="bg-raised hover:bg-raised/70 text-ink font-body text-left rounded-md p-3 transition-colors">
+          📜 &nbsp;Codex
+        </button>
+
+      </nav>
+    }
+  </aside>
+
+  <!-- Colonne principale : le jeu. flex-1 = elle prend tout l'espace restant. -->
+  <section class="flex-1 p-8">
   <h1 class="font-heading text-2xl text-ink mb-4">Écran de jeu — campagne {{ idCampagne() }}</h1>
 
   <!-- Le fil : une bulle par message, empilées. Le style change selon qui parle. -->
@@ -50,4 +120,6 @@
       </div>
     </div>
   }
-</section>
+  </section>
+
+</div>

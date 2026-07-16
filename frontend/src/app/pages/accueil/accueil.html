@@ -1,1 +1,18 @@
-<p>accueil works!</p>
+<!-- Écran d'accueil (route '') : une invitation narrative, centrée, qui mène au tableau de bord.
+     min-h-screen + flex + items/justify-center = la box est centrée verticalement et horizontalement. -->
+<section class="min-h-screen flex items-center justify-center p-8">
+
+  <div class="bg-surface/80 border border-raised rounded-lg p-10 max-w-lg text-center">
+    <p class="font-body text-ink text-lg leading-relaxed mb-8">
+      Maïa s'apprête à raconter une histoire…<br />
+      Que faites-vous ?
+    </p>
+
+    <!-- Le CTA : un lien de navigation stylé en bouton, vers le tableau de bord. -->
+    <a routerLink="/tableau-de-bord"
+       class="inline-block bg-accent hover:bg-accent-dim text-ink font-heading px-6 py-3 rounded-md transition-colors">
+      S'asseoir près du feu, et écouter
+    </a>
+  </div>
+
+</section>

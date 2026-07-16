@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
-import { inject, Injectable } from '@angular/core';
+import {inject, Injectable} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+
 
 // Le jet que Maïa propose (miroir du backend ; redéclaré ici car front et back sont 2 projets séparés).
 export type JetPropose = {
