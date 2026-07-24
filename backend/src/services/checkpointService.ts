@@ -9,6 +9,7 @@ import {insertNpcDal, Npc} from "../dal/npcDAL";
 import {getOrganisationSentinelleDal} from "../dal/campagneDAL";
 import {slugNpc} from "../utils/slug";
 import { NouveauPersonnage } from "../schema/debriefSchema";
+import {generateSnapshot} from "./snapshotService";
 
 const db = getDb();
 
@@ -47,5 +48,10 @@ export function createCheckpoint(params: {
         return { checkpoint, npcs: npcsCrees, memoires: memoiresCreees };
     });
 
-    return transaction();
+    const resultat = transaction();
+
+    // Le snapshot est une PROJECTION des checkpoints → je le régénère APRÈS le commit.
+    generateSnapshot(id_campagne, id_utilisateur);
+
+    return resultat;
 }
