@@ -5,6 +5,7 @@ import { TableauDeBord } from './pages/tableau-de-bord/tableau-de-bord';
 import {authGuard} from './core/auth-guard';
 import {Inscription} from './pages/inscription/inscription';
 import {NouvelleCampagne} from './pages/nouvelle-campagne/nouvelle-campagne';
+import {Jeu} from './pages/jeu/jeu';
 
 
 
@@ -15,5 +16,6 @@ export const routes: Routes = [
   { path: 'connexion',          component: Connexion },
   { path: 'tableau-de-bord',    component: TableauDeBord, canActivate: [authGuard] },
   { path: 'inscription',        component: Inscription },
-  { path: 'campagnes/nouvelle', component: NouvelleCampagne }
+  { path: 'campagnes/nouvelle', component: NouvelleCampagne },
+  { path: 'jeu/:id',            component: Jeu, canActivate: [authGuard] },
 ];

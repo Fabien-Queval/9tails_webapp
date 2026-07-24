@@ -1,0 +1,217 @@
+<!-- La rangée : panneau latéral gauche + colonne principale de jeu, côte à côte. -->
+<div class="flex">
+
+  <!-- Panneau latéral gauche, rétractable.
+       Sa largeur est animée selon panneauOuvert() : w-72 déplié, w-12 replié.
+       shrink-0 l'empêche d'être écrasé par la colonne principale ; overflow-hidden
+       masque proprement le contenu pendant l'animation de largeur. -->
+  <aside class="bg-surface min-h-screen shrink-0 overflow-hidden transition-all duration-300"
+         [class.w-72]="panneauOuvert()" [class.w-12]="!panneauOuvert()">
+
+    <!-- Le petit bouton déplier/replier, TOUJOURS visible (même panneau fermé). -->
+    <button (click)="panneauOuvert.update(v => !v)"
+            [title]="panneauOuvert() ? 'Replier' : 'Déplier'"
+            class="w-full flex justify-end p-3 text-xl text-muted hover:text-accent transition-colors">
+      {{ panneauOuvert() ? '‹' : '›' }}
+    </button>
+
+    <!-- Contenu : visible seulement quand le panneau est déplié. -->
+    @if (panneauOuvert()) {
+      <nav class="flex flex-col gap-2 px-3 pb-4">
+
+        <!-- Fiche de personnage -->
+        @if (personnage(); as pc) {
+          <div class="bg-raised rounded-md p-3">
+            <h2 class="font-heading text-accent text-sm mb-2">{{ pc.nom }}</h2>
+
+            @if (fiche(); as f) {
+              <p class="text-muted font-body text-xs mb-2">Rang d'aventure {{ f.rang_aventure }}</p>
+
+              <ul class="flex flex-col gap-1 text-ink font-body text-sm">
+                <li class="flex justify-between"><span>Corps</span><span>{{ f.caracteristiques.corps }}</span></li>
+                <li class="flex justify-between"><span>Sens</span><span>{{ f.caracteristiques.sens }}</span></li>
+                <li class="flex justify-between"><span>Esprit</span><span>{{ f.caracteristiques.esprit }}</span></li>
+                <li class="flex justify-between"><span>Social</span><span>{{ f.caracteristiques.social }}</span></li>
+              </ul>
+
+              <!-- Compétences : dictionnaire optionnel. Gardé par @if (undefined si aucune).
+                   La boucle keyvalue affiche une ligne par clé → s'ajuste tout seul quand le
+                   wizard remplira la fiche. Rien à retoucher ici quand une compétence s'ajoute. -->
+              @if (f.competences; as comp) {
+                <h3 class="font-heading text-accent text-xs mt-3 mb-1">Compétences</h3>
+                <ul class="flex flex-col gap-1 text-ink font-body text-sm">
+                  @for (c of comp | keyvalue; track c.key) {
+                    <li class="flex justify-between"><span>{{ c.key }}</span><span>{{ c.value }}</span></li>
+                  }
+                </ul>
+              }
+            }
+          </div>
+        } @else {
+          <div class="bg-raised rounded-md p-3">
+            <p class="text-muted font-body text-xs">Aucun personnage pour cette campagne.</p>
+          </div>
+        }
+
+        <!-- Journal (bouton à brancher plus tard). -->
+        <button class="bg-raised hover:bg-raised/70 text-ink font-body text-left rounded-md p-3 transition-colors">
+          📖 &nbsp;Journal
+        </button>
+
+        <!-- Codex (bouton à brancher plus tard). -->
+        <button class="bg-raised hover:bg-raised/70 text-ink font-body text-left rounded-md p-3 transition-colors">
+          📜 &nbsp;Codex
+        </button>
+
+      </nav>
+    }
+  </aside>
+
+  <!-- Colonne principale : le jeu. flex-1 = elle prend tout l'espace restant. -->
+  <section class="flex-1 p-8">
+  <h1 class="font-heading text-2xl text-ink mb-4">Écran de jeu — campagne {{ idCampagne() }}</h1>
+
+  <!-- Le fil : une bulle par message, empilées. Le style change selon qui parle. -->
+  <div class="flex flex-col gap-3 mb-4">
+    @for (msg of messages(); track $index) {
+      @if (msg.emetteur === 'MJ') {
+        <p class="bg-surface text-ink font-body p-4 rounded-md whitespace-pre-line">{{ msg.contenu }}</p>
+      } @else {
+        <p class="bg-accent-dim text-ink font-body p-3 rounded-md self-end max-w-2xl">{{ msg.contenu }}</p>
+      }
+    }
+  </div>
+
+  <!-- Si Maïa réclame un jet, j'affiche sa raison + le bouton. (le "as jet" = un alias pour réutiliser la valeur) -->
+  @if (jetEnAttente(); as jet) {
+    <div class="bg-raised p-4 rounded-md mb-4">
+      <p class="text-muted font-body mb-2">{{ jet.raison }}</p>
+      <button (click)="lancerLesDes()"
+              class="bg-accent hover:bg-accent-dim text-ink font-body px-5 py-2 rounded-md transition-colors">
+        🎲 Lancer les dés — {{ jet.caracteristique }} (difficulté {{ jet.difficulte }})
+      </button>
+    </div>
+  }
+
+    <!-- Jauge de scène : se remplit avec le fil, invite à clôturer au seuil (nudge, jamais un verrou). -->
+    <div class="mb-2">
+      <div class="flex justify-between text-xs font-body text-muted mb-1">
+        <span>Pression de la scène</span>
+        <span [class.text-accent]="jaugePleine()">{{ jaugeScene() }} / {{ SEUIL_DEBRIEF }}</span>
+      </div>
+      <div class="h-2 bg-raised rounded-full overflow-hidden">
+        <div class="h-full bg-accent transition-all duration-300"
+             [class.animate-pulse]="jaugePleine()"
+             [style.width.%]="pourcentageJauge()"></div>
+      </div>
+    </div>
+
+    <!-- Action de scène : clôturer (le débrief). Désactivé pendant l'appel (enDebrief). -->
+    <div class="flex justify-end mb-4">
+      <button (click)="debriefer()" [disabled]="enDebrief()"
+              class="bg-raised hover:bg-accent-dim text-ink font-body px-5 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ enDebrief() ? 'Maïa clôture…' : '📕 Clôturer la scène' }}
+      </button>
+    </div>
+
+  <!-- Champ d'action + bouton envoyer. Verrouillés via saisieBloquee() (réflexion OU jet en attente). -->
+  <div class="flex gap-3">
+    <input [formControl]="action"
+           [placeholder]="enChargement() ? 'Maïa réfléchit…' : 'Que fais-tu ?'"
+           [readonly]="saisieBloquee()"
+           (keyup.enter)="envoyer()"
+           class="flex-1 bg-raised text-ink font-body p-3 rounded-md" />
+    <button (click)="envoyer()" [disabled]="saisieBloquee()"
+            class="bg-accent hover:bg-accent-dim text-ink font-body px-5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+      {{ enChargement() ? '…' : 'Envoyer' }}
+    </button>
+  </div>
+
+  <!-- La modale de dés (V0 sobre ; l'habillage parchemin/dés = P2). -->
+  @if (modaleOuverte() && jetEnAttente(); as jet) {
+    <div class="fixed inset-0 bg-black/60 flex items-center justify-center">
+      <div class="bg-surface p-6 rounded-md max-w-md">
+        <h2 class="font-heading text-xl text-accent mb-2">Jet de {{ jet.caracteristique }}</h2>
+        <p class="text-muted font-body mb-1">Difficulté {{ jet.difficulte }}</p>
+        <p class="text-ink font-body mb-4">{{ jet.raison }}</p>
+        <button (click)="resoudreJet()"
+                class="bg-accent hover:bg-accent-dim text-ink font-body px-5 py-2 rounded-md transition-colors">
+          Lancer les dés
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- La modale de CLÔTURE (débrief) : Maïa PROPOSE, tu valides (retires ce qui cloche), puis on grave.
+       V0 sobre — l'habillage fidèle à la maquette = P2. Corps scrollable pour ne jamais déborder. -->
+  @if (modaleDebrief()) {
+    <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
+      <div class="bg-surface rounded-md w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+        <h2 class="font-heading text-2xl text-accent text-center mb-1">DÉBRIEF</h2>
+
+        @if (propCheckpoint(); as cp) {
+          <p class="text-muted font-body text-center mb-5">{{ cp.titre }}</p>
+
+          <p class="text-muted font-body text-xs mb-1">RÉSUMÉ MJ</p>
+          <p class="bg-raised text-ink font-body p-4 rounded-md mb-6 whitespace-pre-line">{{ cp.contenu }}</p>
+        }
+
+        <!-- Nouveaux PNJ proposés — à valider / retirer -->
+        <p class="text-muted font-body text-xs mb-2">NOUVEAUX PNJ ({{ propNpcs().length }})</p>
+        @if (propNpcs().length === 0) {
+          <p class="text-muted font-body text-sm mb-6">Aucun nouveau personnage.</p>
+        } @else {
+          <div class="flex flex-col gap-2 mb-6">
+            @for (npc of propNpcs(); track $index) {
+              <div class="bg-raised rounded-md p-3 flex justify-between items-start gap-3">
+                <div>
+                  <p class="text-accent font-heading text-sm">{{ npc.nom }}</p>
+                  <p class="text-ink font-body text-sm">{{ npc.description }}</p>
+                </div>
+                <button (click)="retirerNpc($index)"
+                        class="text-muted hover:text-accent font-body text-sm shrink-0">Retirer</button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Souvenirs proposés — récap, à valider / retirer -->
+        <p class="text-muted font-body text-xs mb-2">MÉMOIRES ({{ propMemoires().length }})</p>
+        @if (propMemoires().length === 0) {
+          <p class="text-muted font-body text-sm mb-6">Aucune mémoire.</p>
+        } @else {
+          <div class="flex flex-col gap-2 mb-6">
+            @for (mem of propMemoires(); track $index) {
+              <div class="bg-raised rounded-md p-3 flex justify-between items-start gap-3">
+                <div>
+                  <p class="text-accent font-body text-xs">{{ mem.npc }} · {{ mem.nature }}</p>
+                  <p class="text-ink font-body text-sm">{{ mem.contenu }}</p>
+                </div>
+                <button (click)="retirerMemoire($index)"
+                        class="text-muted hover:text-accent font-body text-sm shrink-0">Retirer</button>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Erreur éventuelle (affichée, plus d'avalage silencieux) -->
+        @if (erreurDebrief(); as err) {
+          <p class="text-accent font-body text-sm mb-3">⚠️ {{ err }}</p>
+        }
+
+        <div class="flex justify-between gap-3">
+          <button (click)="modaleDebrief.set(false)" [disabled]="enregistrement()"
+                  class="bg-raised hover:bg-raised/70 text-ink font-body px-5 py-2 rounded-md transition-colors disabled:opacity-50">
+            Annuler
+          </button>
+          <button (click)="enregistrerCheckpoint()" [disabled]="enregistrement()"
+                  class="bg-accent hover:bg-accent-dim text-ink font-body px-6 py-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ enregistrement() ? 'Enregistrement…' : 'Enregistrer ce checkpoint' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+  </section>
+
+</div>

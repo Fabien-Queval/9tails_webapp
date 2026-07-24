@@ -12,6 +12,8 @@ import {
 import {body, param, validationResult} from "express-validator";
 import {handleValidationErrors} from "../middleware/handleValidationErrors";
 import {proposerMemoiresPourScene} from "../services/memoireService";
+import { jouerTour, lancerJet } from "../services/jeuService";
+import { lireFilRecent } from "../services/messageService";
 import personnageRoute from "./personnageRoute";
 import campagneNpcRoute from "./campagneNpcRoute";
 import arcRoute from "./arcRoute";
@@ -234,6 +236,85 @@ router.post('/:id/proposer-memoires', authMiddleware,
         return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
     }
     });
+
+// ----------------------------------------------- Route JOUER (narration LLM) -----------------------------------------------
+// Comme proposer-memoires : c'est une action au niveau de la campagne (appel LLM), elle reste ici.
+router.post('/:id/jouer', authMiddleware,
+    [
+        param('id').isInt(),
+        body('actionJoueur').isString().isLength({ min: 1, max: 10000 }),
+    ],
+    handleValidationErrors, async (req: Request, res: Response) => {
+    // { actionJoueur } = req.body : je déballe req.body et je vais y chercher SON champ actionJoueur,
+    // pour le poser dans une const du même nom.  (identique à : const actionJoueur = req.body.actionJoueur)
+    const { actionJoueur } = req.body;
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        // jouerTour me rend { recit, jet_propose } ; je renvoie l'objet tel quel au front.
+        const reponseMaia = await jouerTour(id_utilisateur, id_campagne, actionJoueur);
+        res.status(200).json(reponseMaia);
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
+
+        return res.status(502).json({ message: 'Le conteur est indisponible, réessaie.' });
+    }
+});
+
+// ----------------------------------------------- Route JET (dé contextualisé) -----------------------------------------------
+// Le front envoie { caracteristique, difficulte } ; le backend lit la fiche, calcule le pool, lance le dé.
+router.post('/:id/jet', authMiddleware,
+    [
+        param('id').isInt(),
+        body('caracteristique').isIn(['CORPS', 'SENS', 'ESPRIT', 'SOCIAL']),
+        body('difficulte').isInt({ min: 1, max: 9 }).toInt(),
+    ],
+    handleValidationErrors,
+    (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+    const { caracteristique, difficulte } = req.body;
+
+    try {
+        const resultat = lancerJet(id_utilisateur, id_campagne, caracteristique, difficulte);
+        res.status(200).json(resultat);
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')         return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable')   return res.status(404).json({ message: error.message });
+        if (error.message === 'Personnage introuvable') return res.status(404).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
+    }
+});
+
+// Ma limite d'affichage à l'écran : les 50 derniers messages.
+// Volontairement DISTINCTE de NB_MESSAGES_FENETRE (le budget de tokens du LLM, dans jeuService) :
+// ici c'est un confort de LECTURE, pas un budget — les deux nombres ne doivent pas se coupler.
+const LIMITE_FIL_ECRAN = 50;
+
+// ----------------------------------------------- Route LIRE LE FIL (rechargement écran) -----------------------------------------------
+// GET : pas d'appel LLM, pas de body. Je rends les derniers messages de la partie pour que
+// l'écran de jeu se remplisse au chargement au lieu de repartir vide (les messages sont déjà en base).
+// Je borne à LIMITE_FIL_ECRAN : un fil très long alourdirait le navigateur. Charger les plus
+// anciens au scroll = amélioration futur/P2, hors périmètre V0.
+router.get('/:id/messages', authMiddleware,
+    [param('id').isInt()], handleValidationErrors,
+    (req: Request, res: Response) => {
+    const id_campagne    = Number(req.params.id);
+    const id_utilisateur = req.user!.id_utilisateur;
+
+    try {
+        // lireFilRecent vérifie d'abord que la campagne m'appartient (IDOR), puis rend les N derniers (chronologiques).
+        // Même fonction que celle qui nourrit Maïa, mais appelée avec MA limite d'écran, pas la sienne.
+        const messages = lireFilRecent(id_utilisateur, id_campagne, LIMITE_FIL_ECRAN);
+        res.status(200).json({ messages });
+    } catch (error: any) {
+        if (error.message === 'Accès interdit')       return res.status(403).json({ message: error.message });
+        if (error.message === 'Campagne introuvable') return res.status(404).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
+    }
+});
 
 // ----------------------------------------------- Montage des sous-ressources -----------------------------------------------
 // Chaque sous-ressource de la campagne vit dans son propre fichier de routes.

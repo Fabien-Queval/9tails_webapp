@@ -1,9 +1,17 @@
 <!-- En-tête global : ma bannière 9TS, affichée UNIQUEMENT quand je suis connecté
-     (les écrans de connexion/inscription restent nus). Le bouton de déconnexion
-     est posé par-dessus, en haut à droite (position absolute dans un parent relative). -->
+     (les écrans de connexion/inscription restent nus).
+     sticky top-0 z-50 : le bandeau reste collé en haut et le contenu défile DESSOUS.
+     Un élément sticky ancre aussi ses enfants en absolute → plus besoin de "relative". -->
 @if (auth.isLoggedIn()) {
-  <header class="relative">
+  <header class="sticky top-0 z-50">
     <img src="/9ts-header.webp" alt="9TStory — Le héros, c'est vous" class="w-full block" />
+
+    <!-- Lien de navigation (en haut à gauche) : évite de taper l'URL du tableau de bord,
+         depuis n'importe quel écran connecté (y compris l'écran de jeu). -->
+    <a routerLink="/tableau-de-bord"
+      class="absolute top-4 left-4 bg-deep/70 hover:bg-deep text-ink font-body px-4 py-2 rounded-md transition-colors">
+      Tableau de bord
+    </a>
 
     <button (click)="deconnexion()"
       class="absolute top-4 right-4 bg-deep/70 hover:bg-deep text-ink font-body px-4 py-2 rounded-md transition-colors">

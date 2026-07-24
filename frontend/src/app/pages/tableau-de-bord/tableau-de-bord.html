@@ -87,8 +87,8 @@
 
           <!-- ACTIVE : je peux reprendre la partie (écran de jeu, à venir) ou l'archiver. -->
           @if (campagne.statut === 'ACTIVE') {
-            <button
-              class="flex-1 border border-accent text-accent hover:bg-accent hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
+            <button (click)="reprendre(campagne.id_campagne)"
+                    class="flex-1 border border-accent text-accent hover:bg-accent hover:text-ink font-body px-3 py-2 rounded-md transition-colors">
               Reprendre
             </button>
             <button (click)="archiver(campagne.id_campagne)"

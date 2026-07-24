@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { Campagne, CampagneService } from '../../services/campagne';
-import {RouterLink} from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-tableau-de-bord',
@@ -41,5 +41,12 @@ export class TableauDeBord implements OnInit {
   // Au clic "Archiver" : même geste, la campagne passe de Actives à Archivées.
   archiver(id: number): void {
     this.campagneListe.archiverCampagne(id).subscribe(() => this.chargerCampagnes());
+  }
+
+  private router = inject(Router);
+
+// Au clic "Reprendre" : je navigue vers l'écran de jeu de CETTE campagne (son id part dans l'URL).
+  reprendre(id: number): void {
+    this.router.navigate(['/jeu', id]);
   }
 }

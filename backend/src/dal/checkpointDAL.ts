@@ -72,3 +72,22 @@ export function getMaxOrdreCheckpointDal(id_campagne: number): number {
 
     return result.maxOrdre;
 }
+
+export function getCheckpointsByCampagneDal(id_campagne: number): Checkpoint[] {
+    const stmt = db.prepare(`
+    SELECT CHECKPOINT.id_checkpoint,
+           CHECKPOINT.id_arc,
+           CHECKPOINT.titre,
+           CHECKPOINT.contenu,
+           CHECKPOINT.resume,
+           CHECKPOINT.ordre,
+           CHECKPOINT.date_creation
+    FROM CHECKPOINT
+    JOIN ARC ON CHECKPOINT.id_arc = ARC.id_arc
+    WHERE ARC.id_campagne = ?
+    ORDER BY ARC.ordre, CHECKPOINT.ordre
+    `);
+
+    return stmt.all(id_campagne) as Checkpoint[];
+}
+
