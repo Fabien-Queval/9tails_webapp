@@ -93,6 +93,11 @@
     </div>
   }
 
+  <!-- Dock d'action : jauge + clôture + saisie, COLLÉ en bas de l'écran (sticky bottom-0).
+       Reste visible quand on remonte lire le fil ; bg-deep = même fond que la page,
+       pour que les bulles défilent proprement DERRIÈRE sans transparence. -->
+  <div class="sticky bottom-0 bg-deep pt-3 pb-4">
+
     <!-- Jauge de scène : se remplit avec le fil, invite à clôturer au seuil (nudge, jamais un verrou). -->
     <div class="mb-2">
       <div class="flex justify-between text-xs font-body text-muted mb-1">
@@ -114,22 +119,24 @@
       </button>
     </div>
 
-  <!-- Champ d'action + bouton envoyer. Verrouillés via saisieBloquee() (réflexion OU jet en attente). -->
-  <div class="flex gap-3">
-    <input [formControl]="action"
-           [placeholder]="enChargement() ? 'Maïa réfléchit…' : 'Que fais-tu ?'"
-           [readonly]="saisieBloquee()"
-           (keyup.enter)="envoyer()"
-           class="flex-1 bg-raised text-ink font-body p-3 rounded-md" />
-    <button (click)="envoyer()" [disabled]="saisieBloquee()"
-            class="bg-accent hover:bg-accent-dim text-ink font-body px-5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-      {{ enChargement() ? '…' : 'Envoyer' }}
-    </button>
+    <!-- Champ d'action + bouton envoyer. Verrouillés via saisieBloquee() (réflexion OU jet en attente). -->
+    <div class="flex gap-3">
+      <input [formControl]="action"
+             [placeholder]="enChargement() ? 'Maïa réfléchit…' : 'Que fais-tu ?'"
+             [readonly]="saisieBloquee()"
+             (keyup.enter)="envoyer()"
+             class="flex-1 bg-raised text-ink font-body p-3 rounded-md" />
+      <button (click)="envoyer()" [disabled]="saisieBloquee()"
+              class="bg-accent hover:bg-accent-dim text-ink font-body px-5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ enChargement() ? '…' : 'Envoyer' }}
+      </button>
+    </div>
+
   </div>
 
   <!-- La modale de dés (V0 sobre ; l'habillage parchemin/dés = P2). -->
   @if (modaleOuverte() && jetEnAttente(); as jet) {
-    <div class="fixed inset-0 bg-black/60 flex items-center justify-center">
+    <div class="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center">
       <div class="bg-surface p-6 rounded-md max-w-md">
         <h2 class="font-heading text-xl text-accent mb-2">Jet de {{ jet.caracteristique }}</h2>
         <p class="text-muted font-body mb-1">Difficulté {{ jet.difficulte }}</p>
@@ -145,8 +152,8 @@
   <!-- La modale de CLÔTURE (débrief) : Maïa PROPOSE, tu valides (retires ce qui cloche), puis on grave.
        V0 sobre — l'habillage fidèle à la maquette = P2. Corps scrollable pour ne jamais déborder. -->
   @if (modaleDebrief()) {
-    <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-      <div class="bg-surface rounded-md w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+    <div class="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
+      <div class="bg-surface rounded-md w-full max-w-4xl max-h-[85vh] overflow-y-auto p-6">
         <h2 class="font-heading text-2xl text-accent text-center mb-1">DÉBRIEF</h2>
 
         @if (propCheckpoint(); as cp) {
