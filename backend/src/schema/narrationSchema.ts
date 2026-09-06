@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Le JET que Maïa PROPOSE — elle ne le lance pas, elle ne le résout pas.
-// Elle remplit juste "de quoi il s'agit" ; c'est le front (modale) qui lancera les dés via POST /api/roll.
+// Elle remplit juste "de quoi il s'agit" ; c'est le front (modale) qui lancera les dés via POST /api/campagnes/${id}/jet.
 export const JetProposeSchema = z.object({
     // La caractéristique testée — EXACTEMENT les 4 de la fiche perso / du système 9TStory.
     caracteristique: z.enum(['CORPS', 'SENS', 'ESPRIT', 'SOCIAL']),

@@ -1,7 +1,6 @@
 import {getDb} from "../db/db";
 import {assertProprietaireCampagne} from "./campagneService";
 import {getPersonnageByCampagneDal, insertPersonnageDal, Personnage, updatePersonnageDal} from "../dal/personnageDal";
-import {string} from "zod";
 
 
 const db = getDb();
