@@ -279,3 +279,10 @@ L'objectif est de conserver une séparation claire entre :
 * les décisions qui doivent rester déterministes côté serveur
 
 L'IA devient ainsi un composant du système, et non le système lui-même.
+
+## Auteur
+
+**Fabien Queval**
+Projet réalisé dans le cadre du titre professionnel Développeur Web et Web Mobile (ENI Nantes, 2026).
+
+[GitHub](https://github.com/Fabien-Queval)
