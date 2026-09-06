@@ -132,7 +132,7 @@ POST http://localhost:3000/api/campagnes/{{campagneId}}/npcs
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
-{ "slug": "npc_rosalita", "nom": "Rosalita", "description": "Tenancière qui sait tout",
+{ "slug": "npc_rosalitae", "nom": "Rosalitae", "description": "Tenancière qui sait tout",
   "fiche_json": { "role": "informatrice", "ton": "narquois" } }
 
 > {%
