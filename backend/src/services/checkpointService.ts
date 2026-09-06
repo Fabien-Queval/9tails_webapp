@@ -6,10 +6,10 @@ import {MemoireProposee} from "../schema/memoireSchema";
 import {applyMem} from "./memoireService";
 import { Memoire } from "../dal/memoireDAL";
 import {insertNpcDal, Npc} from "../dal/npcDAL";
-import {getOrganisationSentinelleDal} from "../dal/campagneDAL";
 import {slugNpc} from "../utils/slug";
 import { NouveauPersonnage } from "../schema/debriefSchema";
 import {generateSnapshot} from "./snapshotService";
+import {getOrganisationSentinelleDal} from "../dal/organisationDAL";
 
 const db = getDb();
 

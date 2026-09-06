@@ -8,8 +8,9 @@ import {
     NpcStatut,
     updateNpcDal
 } from "../dal/npcDAL";
-import {getCampagneByIdDal, getOrganisationSentinelleDal} from "../dal/campagneDAL";
+import {getCampagneByIdDal} from "../dal/campagneDAL";
 import {assertProprietaireCampagne} from "./campagneService";
+import {getOrganisationSentinelleDal} from "../dal/organisationDAL";
 
 
 const db = getDb();

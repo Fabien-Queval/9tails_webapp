@@ -7,11 +7,11 @@
 import { getDb } from '../db/db';
 import {
     insertCampagneDal,
-    insertOrganisationSentinelleDal,
     insertJournalDal,
     Campagne, getCampagneByIdDal, deleteCampagneDal, updateStatutDal, updateCampagneDal,
     getCampagnesByUtilisateurDal
 } from '../dal/campagneDAL';
+import {insertOrganisationSentinelleDal} from "../dal/organisationDAL";
 
 const db = getDb();
 
