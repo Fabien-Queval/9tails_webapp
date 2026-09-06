@@ -4,17 +4,23 @@
      Un élément sticky ancre aussi ses enfants en absolute → plus besoin de "relative". -->
 @if (auth.isLoggedIn()) {
   <header class="sticky top-0 z-50">
-    <img src="/9ts-header.webp" alt="9TStory — Le héros, c'est vous" class="w-full block" />
+    <!-- RESPONSIVE : hauteur FIXE en mobile (h-14 = 56px, object-cover recadre
+         au lieu d'écraser) → le panneau de jeu peut se caler en sticky top-14
+         juste dessous. À partir de md:, la bannière reprend sa hauteur naturelle. -->
+    <img src="/9ts-header.webp" alt="9TStory — Le héros, c'est vous"
+         class="w-full block max-md:h-14 max-md:object-cover max-md:object-center" />
 
     <!-- Lien de navigation (en haut à gauche) : évite de taper l'URL du tableau de bord,
-         depuis n'importe quel écran connecté (y compris l'écran de jeu). -->
+         depuis n'importe quel écran connecté (y compris l'écran de jeu).
+         RESPONSIVE : la bannière rétrécit avec l'écran mais pas les boutons →
+         version compacte (texte + padding réduits) sous 640px, normale à partir de sm:. -->
     <a routerLink="/tableau-de-bord"
-      class="absolute top-4 left-4 bg-deep/70 hover:bg-deep text-ink font-body px-4 py-2 rounded-md transition-colors">
+      class="absolute top-2 left-2 sm:top-4 sm:left-4 bg-deep/70 hover:bg-deep text-ink font-body text-xs sm:text-base px-2 py-1 sm:px-4 sm:py-2 rounded-md transition-colors">
       Tableau de bord
     </a>
 
     <button (click)="deconnexion()"
-      class="absolute top-4 right-4 bg-deep/70 hover:bg-deep text-ink font-body px-4 py-2 rounded-md transition-colors">
+      class="absolute top-2 right-2 sm:top-4 sm:right-4 bg-deep/70 hover:bg-deep text-ink font-body text-xs sm:text-base px-2 py-1 sm:px-4 sm:py-2 rounded-md transition-colors">
       Se déconnecter
     </button>
   </header>

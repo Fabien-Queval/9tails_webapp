@@ -7,10 +7,18 @@
   --color-accent: #4E9E8E;
   --color-accent-dim: #3A7468;
   --color-ink: #E8E4DC;
-  --color-muted: #8A9199;
+  --color-muted: #ADB4BC; /* éclairci depuis #8A9199 : ratio 4,7:1 sur surface (WCAG AA) */
   --color-danger: #A85555;
   --color-accent-dark: #2B5D52;
 
   --font-heading: "Raleway", sans-serif;
   --font-body: "Inter", sans-serif;
+}
+
+/* Accessibilité clavier : anneau de focus visible sur fond sombre,
+   uniquement à la navigation clavier (:focus-visible), pas au clic souris. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

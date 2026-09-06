@@ -1,7 +1,7 @@
 <!-- Zone de contenu du tableau de bord.
      Le bandeau du haut (WEBAPP 9TAILS + "Joueur") viendra du futur composant Header,
      dans app.html — je ne le mets pas ici, c'est un autre chantier. -->
-<section class="p-8">
+<section class="p-4 md:p8">
 
   <!-- En-tête de page : titre à gauche, bouton de création à droite.
        je pose un flex + justify-between pour pousser les deux aux extrémités. -->
@@ -69,9 +69,20 @@
              je mets donc la description en attendant — le vrai aperçu se branchera plus tard.
              line-clamp-2 coupe proprement le texte à 2 lignes ; le || donne un texte de
              repli quand la description est vide (null). -->
-        <p class="bg-raised rounded-md p-3 text-muted font-body text-sm line-clamp-2 min-h-16">
-          {{ campagne.description || 'Pas encore de description…' }}
-        </p>
+        <div class="bg-raised rounded-md p-3 min-h-16">
+          <p class="text-muted font-body text-sm"
+             [class.line-clamp-2]="idDeplie() !== campagne.id_campagne">
+            {{ campagne.description || 'Pas encore de description…' }}
+          </p>
+        </div>
+
+        @if (campagne.description && campagne.description.length > 90) {
+          <button (click)="basculerDescription(campagne.id_campagne)"
+                  [attr.aria-expanded]="idDeplie() === campagne.id_campagne"
+                  class="self-start -mt-2 text-accent hover:underline font-body text-sm">
+            {{ idDeplie() === campagne.id_campagne ? 'Voir moins' : 'Voir plus' }}
+          </button>
+        }
 
         <!-- Actions de la carte, branchées selon le statut :
              je n'affiche que l'action qui a du sens pour l'état courant de la campagne. -->

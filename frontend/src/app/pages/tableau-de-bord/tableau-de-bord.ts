@@ -16,6 +16,10 @@ export class TableauDeBord implements OnInit {
 
   onglet = signal<'ACTIVE' | 'ARCHIVEE' | 'BROUILLON'>('ACTIVE');
 
+  // Quelle carte montre sa description en entier ? null = toutes repliées.
+  // Un seul id : ouvrir une carte referme automatiquement la précédente.
+  idDeplie = signal<number | null>(null);
+
   campagnesFiltrees = computed(() =>
     this.campagnes().filter(campagne => campagne.statut === this.onglet())
   );
@@ -48,5 +52,10 @@ export class TableauDeBord implements OnInit {
 // Au clic "Reprendre" : je navigue vers l'écran de jeu de CETTE campagne (son id part dans l'URL).
   reprendre(id: number): void {
     this.router.navigate(['/jeu', id]);
+  }
+
+  // Bascule : si c'est déjà cette carte, je referme (null) ; sinon j'ouvre celle-ci
+  basculerDescription(id: number): void {
+    this.idDeplie.update(courant => courant === id ? null : id);
   }
 }

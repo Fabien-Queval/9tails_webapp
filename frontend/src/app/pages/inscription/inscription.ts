@@ -1,12 +1,13 @@
 import {Component, inject} from '@angular/core';
 import {FormControl, ReactiveFormsModule, Validators, FormGroup} from '@angular/forms';
 import {Auth} from '../../core/auth';
-import {Router} from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-inscription',
     imports: [
-        ReactiveFormsModule
+        ReactiveFormsModule,
+        RouterLink
     ],
   templateUrl: './inscription.html',
   styleUrl: './inscription.scss',

@@ -25,25 +25,27 @@
 <div class="bg-surface rounded-lg p-6">
 
 
-  <form [formGroup]="formulaire" class="flex gap-4">
+  <!-- RESPONSIVE : flex-col sur mobile (colonnes empilées), md:flex-row dès 768px.
+       A11Y : chaque label est relié à son champ par for/id. -->
+  <form [formGroup]="formulaire" class="flex flex-col md:flex-row gap-4">
 
     <div class="flex-1 flex flex-col gap-4">
 
       <div class="flex flex-col gap-1">
-        <label class="font-body text-ink">Nom de la campagne</label>
-        <input type="text" formControlName="titre"
+        <label for="titre" class="font-body text-ink">Nom de la campagne</label>
+        <input id="titre" type="text" formControlName="titre"
                class="bg-raised text-ink rounded-md px-3 py-2" />
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="font-body text-ink">Genre / Univers</label>
-        <input type="text" formControlName="genre"
+        <label for="genre" class="font-body text-ink">Genre / Univers</label>
+        <input id="genre" type="text" formControlName="genre"
                class="bg-raised text-ink rounded-md px-3 py-2" />
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="font-body text-ink">Description courte</label>
-        <textarea formControlName="description"
+        <label for="description-setting" class="font-body text-ink">Description courte</label>
+        <textarea id="description-setting" formControlName="description"
                class="bg-raised text-ink rounded-md px-3 py-2"></textarea>
       </div>
 
@@ -51,8 +53,8 @@
 
     <div class="flex-1 flex flex-col gap-4">
       <div class="flex flex-col gap-1">
-        <label class="font-body text-ink">Maturité</label>
-        <select formControlName="maturite" class="bg-raised text-ink rounded-md px-3 py-2">
+        <label for="maturite" class="font-body text-ink">Maturité</label>
+        <select id="maturite" formControlName="maturite" class="bg-raised text-ink rounded-md px-3 py-2">
           <option value="" disabled>Choisis un âge…</option>
           <option value="12">12 ans</option>
           <option value="16">16 ans</option>
@@ -85,25 +87,25 @@
 @if (etape() === 2) {
   <div class="bg-surface rounded-lg p-6">
 
-    <form [formGroup]="formulairePersonnage" class="flex gap-6">
+    <form [formGroup]="formulairePersonnage" class="flex flex-col md:flex-row gap-6">
 
       <!-- Gauche : identité (on tape) -->
       <div class="flex-1 flex flex-col gap-4">
         <div class="flex flex-col gap-1">
-          <label class="font-body text-ink">Nom du personnage</label>
-          <input type="text" formControlName="nom" class="bg-raised text-ink rounded-md px-3 py-2" />
+          <label for="nom-pc" class="font-body text-ink">Nom du personnage</label>
+          <input id="nom-pc" type="text" formControlName="nom" class="bg-raised text-ink rounded-md px-3 py-2" />
         </div>
         <div class="flex flex-col gap-1">
-          <label class="font-body text-ink">Race / Espèce</label>
-          <input type="text" formControlName="race" class="bg-raised text-ink rounded-md px-3 py-2" />
+          <label for="race" class="font-body text-ink">Race / Espèce</label>
+          <input id="race" type="text" formControlName="race" class="bg-raised text-ink rounded-md px-3 py-2" />
         </div>
         <div class="flex flex-col gap-1">
-          <label class="font-body text-ink">Classe / Archétype</label>
-          <input type="text" formControlName="classe" class="bg-raised text-ink rounded-md px-3 py-2" />
+          <label for="classe" class="font-body text-ink">Classe / Archétype</label>
+          <input id="classe" type="text" formControlName="classe" class="bg-raised text-ink rounded-md px-3 py-2" />
         </div>
         <div class="flex flex-col gap-1">
-          <label class="font-body text-ink">Description courte</label>
-          <textarea formControlName="description" class="bg-raised text-ink rounded-md px-3 py-2"></textarea>
+          <label for="description-pc" class="font-body text-ink">Description courte</label>
+          <textarea id="description-pc" formControlName="description" class="bg-raised text-ink rounded-md px-3 py-2"></textarea>
         </div>
       </div>
 
@@ -135,10 +137,13 @@
             <div class="flex items-center justify-between bg-raised rounded-md px-3 py-2">
               <span class="font-body text-ink uppercase">{{ carac }}</span>
               <div class="flex items-center gap-3">
+                <!-- aria-label : « − » seul ne dit rien à un lecteur d'écran. -->
                 <button type="button" (click)="decrementer(carac)"
+                        [attr.aria-label]="'Diminuer ' + carac"
                         class="bg-surface text-ink w-8 h-8 rounded-md">−</button>
                 <span class="font-body text-ink w-4 text-center">{{ caracs()[carac] }}</span>
                 <button type="button" (click)="incrementer(carac)"
+                        [attr.aria-label]="'Augmenter ' + carac"
                         class="bg-accent text-ink w-8 h-8 rounded-md">+</button>
               </div>
             </div>
@@ -161,13 +166,13 @@
 @if (etape() === 3) {
   <div class="bg-surface rounded-lg p-6">
 
-    <div class="flex gap-6">
+    <div class="flex flex-col md:flex-row gap-6">
 
       <div class="flex-1 flex flex-col gap-4">
 
         <div class="flex flex-col gap-1">
-          <label class="font-body text-ink">Objectif</label>
-          <select [value]="objectif()" (change)="objectif.set(lireValeur($event))"
+          <label for="objectif" class="font-body text-ink">Objectif</label>
+          <select id="objectif" [value]="objectif()" (change)="objectif.set(lireValeur($event))"
                   class="bg-raised text-ink rounded-md px-3 py-2">
             <option value="" disabled>Choisis un objectif…</option>
             @for (o of objectifs; track o) { <option [value]="o">{{ o }}</option> }
@@ -176,15 +181,15 @@
 
         @if (objectif() === 'AUTRE') {
           <div class="flex flex-col gap-1">
-            <label class="font-body text-ink">Précise ton objectif</label>
-            <input type="text" [value]="objectifAutre()" (input)="objectifAutre.set(lireValeur($event))"
+            <label for="objectif-autre" class="font-body text-ink">Précise ton objectif</label>
+            <input id="objectif-autre" type="text" [value]="objectifAutre()" (input)="objectifAutre.set(lireValeur($event))"
                    class="bg-raised text-ink rounded-md px-3 py-2" />
           </div>
         }
 
         <div class="flex flex-col gap-1">
-          <label class="font-body text-ink">Ton</label>
-          <select [value]="ton()" (change)="ton.set(lireValeur($event))"
+          <label for="ton" class="font-body text-ink">Ton</label>
+          <select id="ton" [value]="ton()" (change)="ton.set(lireValeur($event))"
                   class="bg-raised text-ink rounded-md px-3 py-2">
             <option value="" disabled>Choisis un ton…</option>
             @for (t of tons; track t) { <option [value]="t">{{ t }}</option> }
@@ -194,8 +199,8 @@
       </div>
 
       <div class="flex-1 flex flex-col gap-1">
-        <label class="font-body text-ink">Contexte de départ</label>
-        <textarea [value]="contexte()" (input)="contexte.set(lireValeur($event))"
+        <label for="contexte" class="font-body text-ink">Contexte de départ</label>
+        <textarea id="contexte" [value]="contexte()" (input)="contexte.set(lireValeur($event))"
                   class="bg-raised text-ink rounded-md px-3 py-2 flex-1 min-h-48"
                   placeholder="La scène d'ouverture que la MJ va faire vivre…"></textarea>
       </div>

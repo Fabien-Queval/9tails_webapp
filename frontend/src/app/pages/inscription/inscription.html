@@ -1,9 +1,42 @@
-<!-- /inscription -->
+<!-- /inscription — même structure que /connexion (carte centrée, labels reliés). -->
 
-<form [formGroup]="formulaire" (ngSubmit)="onSubmit()">
-  <input type="email" formControlName="email" placeholder="Email"/>
-  <input type="text" formControlName="pseudo" placeholder="Pseudonyme"/>
-  <input type="password" formControlName="password" placeholder="Password"/>
+<main class="min-h-screen flex items-center justify-center p-4">
+  <form [formGroup]="formulaire" (ngSubmit)="onSubmit()"
+        class="bg-surface rounded-md p-6 sm:p-8 w-full max-w-md flex flex-col gap-4">
 
-  <button type="submit" [disabled]="formulaire.invalid">S'enregistrer</button>
-</form>
+    <h1 class="font-heading text-2xl text-accent text-center mb-2">Inscription</h1>
+
+    <div class="flex flex-col gap-1">
+      <label for="email" class="font-body text-ink">Email</label>
+      <input id="email" type="email" formControlName="email"
+             autocomplete="email" placeholder="vous@exemple.fr"
+             class="bg-raised text-ink font-body rounded-md px-3 py-2" />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="pseudo" class="font-body text-ink">Pseudonyme</label>
+      <input id="pseudo" type="text" formControlName="pseudo"
+             autocomplete="nickname"
+             class="bg-raised text-ink font-body rounded-md px-3 py-2" />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="password" class="font-body text-ink">Mot de passe</label>
+      <input id="password" type="password" formControlName="password"
+             autocomplete="new-password"
+             class="bg-raised text-ink font-body rounded-md px-3 py-2" />
+      <p class="font-body text-muted text-xs">8 caractères minimum.</p>
+    </div>
+
+    <button type="submit" [disabled]="formulaire.invalid"
+            class="bg-accent hover:bg-accent-dim disabled:opacity-50 disabled:cursor-not-allowed
+                   text-deep font-heading font-semibold rounded-md px-4 py-2 mt-2 transition-colors">
+      S'enregistrer
+    </button>
+
+    <p class="font-body text-muted text-sm text-center">
+      Déjà un compte ?
+      <a routerLink="/connexion" class="text-accent hover:underline">Se connecter</a>
+    </p>
+  </form>
+</main>
